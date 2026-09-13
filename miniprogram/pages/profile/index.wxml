@@ -11,7 +11,11 @@
 <view wx:else class="state-block">登录中…</view>
 
 <view class="card">
-  <view class="profile-row" bindtap="goFeedback">
+  <view class="profile-row" bindtap="goMyRides">
+    <text>我的发布</text>
+    <text class="meta">›</text>
+  </view>
+  <view class="profile-row profile-row-divider" bindtap="goFeedback">
     <text>意见反馈</text>
     <text class="meta">›</text>
   </view>

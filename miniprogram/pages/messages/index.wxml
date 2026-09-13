@@ -12,11 +12,13 @@
 
 <view wx:else>
   <view class="card" wx:for="{{sessions}}" wx:key="id" data-id="{{item.id}}" bindtap="openChat">
-    <view style="display:flex;justify-content:space-between;align-items:center">
-      <view style="font-weight:600">{{item.title}}</view>
-      <view wx:if="{{item.unread > 0}}" class="tag">{{item.unread}}</view>
+    <view class="msg-head">
+      <!-- 会话标题用卡片标题字阶 32rpx/600，右侧未读红点徽标 -->
+      <view class="msg-title">{{item.title}}</view>
+      <view wx:if="{{item.unread > 0}}" class="unread-badge">{{item.unread}}</view>
     </view>
-    <view class="meta" style="margin-top:8rpx">{{item.preview}}</view>
+    <!-- 预览一行截断：长消息不撑破卡片（RFC-007） -->
+    <view class="meta msg-preview">{{item.preview}}</view>
     <view class="meta" wx:if="{{item.time}}">{{item.time}}</view>
   </view>
 </view>

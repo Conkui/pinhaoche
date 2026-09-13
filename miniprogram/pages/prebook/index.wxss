@@ -1,1 +1,17 @@
-/* 预打车页：样式走全局 app.wxss */
+/* 预打车页：状态标签语义着色 + 详情入口暗示；基础令牌走全局 app.wxss */
+
+/* 标题行：路线占满、右侧留浅灰 ›，仅作视觉暗示，不新增点击热区 */
+.prebook-head {
+  display: flex;
+  align-items: center;
+}
+
+.prebook-head .route-line {
+  flex: 1;
+}
+
+.prebook-chevron {
+  margin-left: 12rpx;
+  font-size: 32rpx;
+  color: #9ca3af;
+}

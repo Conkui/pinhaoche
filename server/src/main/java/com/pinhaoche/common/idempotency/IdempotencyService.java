@@ -70,7 +70,18 @@ public class IdempotencyService {
             return replay.apply(existing.getResourceId());
         }
 
-        T result = action.get();
+        // 业务失败时补偿删除 Redis 键：否则同 key 的重试会命中 SETNX 失败且无 DB 记录，
+        // 被误判为 IDEMPOTENCY_CONFLICT，客户端永远无法用原幂等键重试（集成验收发现）。
+        T result;
+        try {
+            result = action.get();
+        } catch (RuntimeException e) {
+            try {
+                redis.delete(redisKey);
+            } catch (RuntimeException ignored) {
+            }
+            throw e;
+        }
         long resourceId = result instanceof Resource r ? r.id() : 0L;
         try {
             repository.save(new IdempotencyRecord(actorId, idempotencyKey, operation, hash,

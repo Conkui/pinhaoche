@@ -9,50 +9,50 @@
   h1 { font-size:18px; color:#111827; } .note { color:#6b7280; font-size:12px; margin-bottom:20px; }
   .grid { display:flex; flex-wrap:wrap; gap:24px; }
   /* 手机框 */
-  .phone { width:320px; background:#f3f4f6; border-radius:28px; border:8px solid #111827; overflow:hidden; display:flex; flex-direction:column; height:620px; }
+  .phone { width:320px; background:#f5f7fa; border-radius:28px; border:8px solid #111827; overflow:hidden; display:flex; flex-direction:column; height:620px; }
   .navbar { background:#fff; padding:10px 14px; font-weight:600; font-size:15px; text-align:center; border-bottom:1px solid #f0f0f0; }
   .pagebody { flex:1; overflow:hidden; padding:0; }
   .label { font-size:13px; color:#374151; margin-bottom:6px; text-align:center; }
   /* app.wxss 组件 */
-  .card { background:#fff; border-radius:16rpx; padding:24px 14px; margin:10px 12px; font-size:14px; }
-  .btn-primary { background:#576b95; color:#fff; border-radius:12rpx; font-size:15px; padding:11px 0; text-align:center; }
-  .btn-primary.disabled { background:#c6cbd4; }
-  .btn-plain { background:#fff; color:#576b95; border:1px solid #576b95; border-radius:12rpx; font-size:14px; padding:9px 0; text-align:center; }
+  .card { background:#fff; border-radius:20rpx; padding:24px 14px; margin:10px 12px; font-size:14px; box-shadow:0 3px 10px rgba(15,23,42,0.06); }
+  .btn-primary { background:linear-gradient(180deg,#4096ff,#1677ff); color:#fff; border-radius:16rpx; font-size:15px; padding:11px 0; text-align:center; box-shadow:0 4px 10px rgba(22,119,255,0.25); }
+  .btn-primary.disabled { background:#bbcaf4; box-shadow:none; }
+  .btn-plain { background:#fff; color:#1677ff; border:1px solid rgba(22,119,255,0.45); border-radius:16rpx; font-size:14px; padding:9px 0; text-align:center; }
   .route-line { font-size:17px; font-weight:600; color:#111827; }
   .route-arrow { color:#9ca3af; margin:0 6px; }
   .meta { color:#6b7280; font-size:12px; }
   .meta-strong { color:#111827; font-weight:600; }
-  .tag { display:inline-block; background:#eef1f6; color:#576b95; border-radius:8rpx; padding:2px 8px; font-size:11px; }
+  .tag { display:inline-block; background:#eef1f6; color:#1677ff; border-radius:8rpx; padding:2px 8px; font-size:11px; }
   .state-block { padding:60px 20px; text-align:center; color:#9ca3af; font-size:13px; }
   /* 底栏 */
   .tabbar { display:flex; background:#fff; border-top:1px solid #f0f0f0; }
   .tabbar .tab { flex:1; text-align:center; padding:8px 0 10px; font-size:11px; color:#9ca3af; }
-  .tabbar .tab.on { color:#576b95; font-weight:600; }
+  .tabbar .tab.on { color:#1677ff; font-weight:600; }
   /* 聊天 */
   .conn-tip { background:#fef3c7; color:#92400e; font-size:11px; text-align:center; padding:4px 0; }
   .row { display:flex; flex-direction:column; align-items:flex-start; margin-bottom:12px; }
   .row-mine { align-items:flex-end; }
   .bubble { max-width:70%; background:#fff; border-radius:16rpx; padding:9px 12px; font-size:14px; }
-  .bubble-mine { background:#576b95; color:#fff; }
+  .bubble-mine { background:#1677ff; color:#fff; }
   .bubble-meta { font-size:10px; color:#9ca3af; margin-top:3px; }
   .state-failed { color:#dc2626; }
   .quick-chip { background:#fff; border-radius:999px; padding:5px 12px; font-size:12px; color:#374151; display:inline-block; margin:0 6px 6px 0; }
   .input-bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#fff; }
-  .chat-input { flex:1; background:#f3f4f6; border-radius:12rpx; padding:8px 12px; font-size:13px; color:#9ca3af; }
-  .send-btn { background:#576b95; color:#fff; border-radius:12rpx; padding:8px 18px; font-size:13px; }
+  .chat-input { flex:1; background:#f5f7fa; border-radius:12rpx; padding:8px 12px; font-size:13px; color:#9ca3af; }
+  .send-btn { background:#1677ff; color:#fff; border-radius:12rpx; padding:8px 18px; font-size:13px; }
   /* picker 行 */
   .picker-row { background:#f9fafb; border-radius:12rpx; padding:10px 12px; color:#111827; }
   .step-chip { display:inline-flex; align-items:center; background:#f9fafb; border-radius:12rpx; }
-  .step-btn { width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:#576b95; font-size:19px; }
+  .step-btn { width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:#1677ff; font-size:19px; }
   .step-num { min-width:30px; text-align:center; font-weight:600; }
   .wait-chip { background:#f9fafb; border-radius:999px; padding:6px 16px; color:#6b7280; font-size:12px; display:inline-block; margin-right:8px; }
-  .wait-chip-on { background:#eef1f6; color:#576b95; font-weight:600; }
+  .wait-chip-on { background:#eef1f6; color:#1677ff; font-weight:600; }
   .place-item { padding:12px 4px; border-bottom:1px solid #f3f4f6; font-size:14px; }
 </style>
 </head>
 <body>
 <h1>拼好车 V1 UI 预览</h1>
-<div class="note">与 miniprogram/ 各页面 wxml/wxss 一比一还原：白卡片、浅灰背景、系统蓝 #576b95 主色、每页一个 Primary Action（UI_SPEC）。数据为验收环境样例。</div>
+<div class="note">与 miniprogram/ 各页面 wxml/wxss 一比一还原：白卡片、浅灰背景、系统蓝 #1677ff 主色、每页一个 Primary Action（UI_SPEC）。数据为验收环境样例。</div>
 <div class="grid">
 
   <!-- 已打上 -->
@@ -250,6 +250,33 @@
       <div class="meta" style="margin-bottom:6px">遇到问题或有建议？告诉我们（最多 500 字）</div>
       <div class="picker-row" style="color:#9ca3af;min-height:110px">如：地点列表想增加 XX、消息提醒收不到…</div>
       <div class="btn-primary disabled" style="margin-top:12px">提交反馈</div>
+    </div>
+  </div></div></div>
+
+  <!-- 我的发布（RFC-008） -->
+  <div><div class="label">⑪ 我的发布（下架管理）</div>
+  <div class="phone"><div class="navbar">我的发布</div><div class="pagebody">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="route-line">学校东门<span class="route-arrow">→</span>万达广场2号门</div>
+        <span class="tag" style="background:#e8f1ff;color:#1677ff">匹配中</span>
+      </div>
+      <div class="meta" style="margin-top:4px">09-14 18:00 · 已有 2 人 · 剩 2 位</div>
+      <div class="btn-plain" style="margin-top:10px;color:#ff4d4f;border-color:rgba(255,77,79,0.45)">下架（不再等人）</div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="route-line">学校东门<span class="route-arrow">→</span>高铁站</div>
+        <span class="tag" style="background:#f0f0f0;color:#9ca3af">已过期</span>
+      </div>
+      <div class="meta" style="margin-top:4px">09-14 15:30 · 已有 1 人 · 剩 2 位</div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="route-line">学校东门<span class="route-arrow">→</span>汽车站</div>
+        <span class="tag" style="background:#f6ffed;color:#52c41a">已打上</span>
+      </div>
+      <div class="meta" style="margin-top:4px">车牌 苏A12345 · 已有 1 人 · 剩 2 位</div>
     </div>
   </div></div></div>
 

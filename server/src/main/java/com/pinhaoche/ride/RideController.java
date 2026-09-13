@@ -30,12 +30,18 @@ public class RideController {
         return rideService.list(view);
     }
 
+    @GetMapping("/rides/mine")
+    public List<RideService.RideDto> listMine(jakarta.servlet.http.HttpServletRequest http) {
+        return rideService.listMine(userId(http));
+    }
+
     @GetMapping("/rides/{rideId}")
     public RideService.RideDto get(@PathVariable long rideId) {
         return rideService.get(rideId);
     }
 
     @PostMapping("/rides")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED) // openapi 契约：201 Created
     public RideService.RideDto create(
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody RideService.CreateRideRequest request,

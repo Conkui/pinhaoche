@@ -1,3 +1,10 @@
+<!-- 顶部 hero：RFC-007 允许的浅色渐变引流区（#e8f1ff→#f5f7fa 极浅同色系），
+     提升首页层级但不违反"禁止大面积花哨渐变"红线 -->
+<view class="hero">
+  <view class="hero-title">有人已经打上车了</view>
+  <view class="hero-sub">联系车主问问还能不能捎你一段</view>
+</view>
+
 <view wx:if="{{loading}}" class="state-block">加载中…</view>
 
 <view wx:elif="{{loadFailed}}" class="state-block">
@@ -12,12 +19,21 @@
 
 <block wx:else>
   <view class="card" wx:for="{{cards}}" wx:key="id">
-    <view class="route-line">{{item.route}}</view>
+    <!-- 信息顺序不变：路线 > 余位 > 车牌/距离 > 联系按钮（Primary Action 置底通栏） -->
+    <view class="booked-head">
+      <view class="route-line">{{item.route}}</view>
+      <!-- 满员用中性灰语义标签，避免和可加入的状态混淆 -->
+      <text wx:if="{{item.seats === 0}}" class="status-tag-neutral">已满</text>
+    </view>
     <view class="meta" style="margin-top:8rpx">
       还有 <text class="meta-strong">{{item.seats}}</text> 个位置 · {{item.waiting}}
     </view>
-    <view class="meta" wx:if="{{item.plate}}">车牌 {{item.plate}}</view>
-    <view class="meta" wx:if="{{item.distance}}">{{item.distance}}</view>
+    <!-- 车牌/距离合并为一行浅灰小字，减少卡片碎裂感（内容与顺序不变） -->
+    <view class="meta booked-meta-line" wx:if="{{item.plate || item.distance}}">
+      <text wx:if="{{item.plate}}">车牌 {{item.plate}}</text>
+      <text wx:if="{{item.plate && item.distance}}"> · </text>
+      <text wx:if="{{item.distance}}">{{item.distance}}</text>
+    </view>
     <view style="margin-top:20rpx" wx:if="{{item.seats > 0}}">
       <view class="btn-primary" data-id="{{item.id}}" bindtap="contactOwner">立即联系车主</view>
     </view>

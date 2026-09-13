@@ -1,1 +1,40 @@
-/* 消息页：样式走全局 app.wxss */
+/* 消息页：标题加重 + 未读红点徽标 + 预览单行截断；基础令牌走全局 app.wxss */
+
+/* 标题行左右分布：标题占满、徽标贴右 */
+.msg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* 会话标题：卡片标题字阶 32rpx/600（RFC-007） */
+.msg-title {
+  flex: 1;
+  margin-right: 16rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* 未读徽标：危险色 #ff4d4f 圆形白字；
+   min-width 32rpx 保证 1 位数字也是正圆，多位数自动加宽不破形 */
+.unread-badge {
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  box-sizing: border-box;
+  padding: 0 8rpx;
+  border-radius: 999rpx;
+  background: #ff4d4f;
+  color: #ffffff;
+  font-size: 22rpx;
+  text-align: center;
+}
+
+/* 预览一行截断：超出宽度显示省略号，保证列表节奏统一 */
+.msg-preview {
+  margin-top: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

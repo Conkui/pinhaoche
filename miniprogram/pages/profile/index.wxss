@@ -1,8 +1,15 @@
-/* 我的页：反馈入口行 */
+/* 我的页：入口行（我的发布 / 意见反馈） */
 .profile-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8rpx 0;
   font-size: 32rpx;
+}
+
+/* 多行入口之间的浅灰分隔线 */
+.profile-row-divider {
+  border-top: 1rpx solid #f3f4f6;
+  margin-top: 16rpx;
+  padding-top: 24rpx;
 }

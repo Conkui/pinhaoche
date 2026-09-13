@@ -20,6 +20,10 @@ Page({
     this.onShow()
   },
 
+  goMyRides() {
+    wx.navigateTo({ url: '/pages/my-rides/index' })
+  },
+
   goFeedback() {
     wx.navigateTo({ url: '/pages/feedback/index' })
   },

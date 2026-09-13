@@ -1,16 +1,132 @@
-/* 发布页局部样式 */
+/* 发布页局部样式：沿用全局视觉令牌（主色 #1677ff / 卡片白底 / 间距 8rpx 倍数），本页仅做强化覆盖 */
+
+.field-label {
+  margin-bottom: 16rpx;
+}
+
+.field-gap {
+  margin-top: 32rpx;
+}
+
+/* 内联下拉触发行：浅灰底 + 右侧箭头，与全局 picker-row 类名叠加 */
 .picker-row {
-  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.picker-text {
+  font-size: 30rpx;
+}
+
+.picker-text-set {
+  color: #1f2937;
+}
+
+.picker-text-hint {
+  color: #9ca3af;
+}
+
+.picker-arrow {
+  color: #9ca3af;
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
+
+.place-retry {
+  margin-top: 16rpx;
+  color: #1677ff;
+  font-size: 26rpx;
+}
+
+/* "其他"展开的自定义输入面板：提示行用弱化色 #9ca3af */
+.custom-panel {
+  margin-top: 16rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.custom-hint {
+  color: #9ca3af;
+  font-size: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.custom-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.custom-input {
+  flex: 1;
+  background: #ffffff;
   border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  color: #111827;
+  padding: 16rpx 24rpx;
+  font-size: 28rpx;
+}
+
+.custom-confirm {
+  flex-shrink: 0;
+  color: #ffffff;
+  background: #1677ff;
+  border-radius: 12rpx;
+  padding: 16rpx 32rpx;
+  font-size: 28rpx;
+}
+
+/* 出发时间分组框：date + time 两个原生滚轮 picker 并排 */
+.time-group {
+  display: flex;
+  align-items: stretch;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.time-picker {
+  flex: 1;
+}
+
+.time-cell {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 24rpx;
+}
+
+.time-label {
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.time-value {
+  color: #1f2937;
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.time-divider {
+  width: 1rpx;
+  background: #e5e7eb;
+}
+
+/* stepper：间距取 8rpx 倍数，加减号用主色 */
+.stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
 }
 
 .stepper {
   display: flex;
   align-items: center;
-  background: #f9fafb;
-  border-radius: 12rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
 }
 
 .step-btn {
@@ -19,7 +135,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #576b95;
+  color: #1677ff;
   font-size: 40rpx;
 }
 
@@ -27,10 +143,33 @@
   min-width: 64rpx;
   text-align: center;
   font-weight: 600;
+  color: #1f2937;
 }
 
 .remark-input {
-  background: #f9fafb;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+/* 提交按钮：通栏渐变主按钮（覆盖全局 btn-primary 的纯色背景） */
+.submit-bar {
+  padding: 24rpx 24rpx 40rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+}
+
+.page-submit {
+  background: linear-gradient(90deg, #1677ff, #4d9bff);
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.06);
+}
+
+.page-submit-disabled {
+  background: #c6cbd4;
+  box-shadow: none;
+}
+
+/* 预设地点加载中提示（消费 placesLoading，Review P2） */
+.place-loading {
+  margin-top: 8rpx;
 }

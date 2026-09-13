@@ -1,1 +1,42 @@
-/* 已打上页：样式走全局 app.wxss，页面级只保留个性化微调 */
+/* 已打上页：hero 引流区 + 卡片微调；基础令牌（card/btn/route/meta）走全局 app.wxss */
+
+/* hero：#e8f1ff → #f5f7fa 极浅同色系渐变，向下自然融入页面背景。
+   只用颜色制造层级，不用图片、不加阴影，控制视觉噪音 */
+.hero {
+  height: 140rpx;
+  box-sizing: border-box;
+  padding: 32rpx 32rpx 0;
+  background: linear-gradient(180deg, #e8f1ff, #f5f7fa);
+}
+
+/* 页面大标题字阶：34rpx/600（RFC-007） */
+.hero-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.hero-sub {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+/* 路线行与右侧"已满"标签左右分布，标签不挤占路线宽度 */
+.booked-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.booked-head .route-line {
+  flex: 1;
+  margin-right: 12rpx;
+}
+
+/* 车牌/距离合并行：flex 布局让分隔点与文本自然排一行，可换行兜底 */
+.booked-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+}

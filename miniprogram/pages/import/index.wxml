@@ -7,33 +7,64 @@
 </view>
 
 <view class="card">
-  <view class="meta" style="margin-bottom:12rpx">打车平台</view>
+  <view class="meta field-label">打车平台</view>
   <picker range="{{providers}}" range-key="label" value="{{providerIndex}}" bindchange="onProviderChange">
-    <view class="picker-row">{{providers[providerIndex].label}}</view>
+    <view class="picker-row">
+      <text class="picker-text picker-text-set">{{providers[providerIndex].label}}</text>
+      <text class="picker-arrow">▾</text>
+    </view>
   </picker>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">车牌号（必填）</view>
+  <view class="meta field-label field-gap">车牌号（必填）</view>
   <input class="plate-input" value="{{plateNumber}}" bindinput="onPlate" maxlength="32" placeholder="如：苏A12345" />
 
-  <view class="meta" style="margin:24rpx 0 12rpx">出发地</view>
-  <view class="picker-row" bindtap="pickOrigin"><text>{{origin.text || '请选择地点'}}</text></view>
+  <!-- 出发地/目的地：本页内联下拉（预设地点 + 末尾"其他"），不再跳转地点选择页 -->
+  <view class="meta field-label field-gap">出发地</view>
+  <picker mode="selector" range="{{placeOptions}}" bindchange="onOriginPick">
+    <view class="picker-row">
+      <text class="picker-text {{origin ? 'picker-text-set' : 'picker-text-hint'}}">{{origin ? origin.text : '请选择出发地'}}</text>
+      <text class="picker-arrow">▾</text>
+    </view>
+  </picker>
+  <view wx:if="{{placesError}}" class="place-retry" bindtap="loadPlaces">预设地点加载失败，点击重试</view>
+  <view wx:if="{{originCustomOpen}}" class="custom-panel">
+    <view class="custom-hint">选择"其他"可输入自定义地点</view>
+    <view class="custom-row">
+      <input class="custom-input" value="{{originCustomText}}" bindinput="onOriginCustomInput"
+             maxlength="100" placeholder="如：校门口奶茶店（1-100字）" />
+      <view class="custom-confirm" bindtap="confirmOriginCustom">确认</view>
+    </view>
+  </view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">目的地</view>
-  <view class="picker-row" bindtap="pickDestination"><text>{{destination.text || '请选择地点'}}</text></view>
+  <view class="meta field-label field-gap">目的地</view>
+  <picker mode="selector" range="{{placeOptions}}" bindchange="onDestinationPick">
+    <view class="picker-row">
+      <text class="picker-text {{destination ? 'picker-text-set' : 'picker-text-hint'}}">{{destination ? destination.text : '请选择目的地'}}</text>
+      <text class="picker-arrow">▾</text>
+    </view>
+  </picker>
+  <view wx:if="{{destinationCustomOpen}}" class="custom-panel">
+    <view class="custom-hint">选择"其他"可输入自定义地点</view>
+    <view class="custom-row">
+      <input class="custom-input" value="{{destinationCustomText}}" bindinput="onDestinationCustomInput"
+             maxlength="100" placeholder="如：高铁站南出口（1-100字）" />
+      <view class="custom-confirm" bindtap="confirmDestinationCustom">确认</view>
+    </view>
+  </view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">剩余距离（选填，按 App 截图填写）</view>
+  <view class="meta field-label field-gap">剩余距离（选填，按 App 截图填写）</view>
   <input class="plate-input" type="digit" value="{{remainingDistance}}" bindinput="onDistance" placeholder="如 18.6" />
   <view class="meta" style="margin-top:8rpx">该数据来自截图/手动填写，发布后仅展示为参考值</view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">愿意等待</view>
-  <view style="display:flex;gap:16rpx">
+  <view class="meta field-label field-gap">愿意等待</view>
+  <view class="wait-row">
     <view wx:for="{{waitings}}" wx:key="*this"
           class="wait-chip {{waitingIndex === index ? 'wait-chip-on' : ''}}"
           data-index="{{index}}" bindtap="onWaiting">{{item}} 分钟</view>
   </view>
   <view class="meta" style="margin-top:8rpx">都不选则展示"等待时间不确定"</view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">可拼座位数</view>
+  <view class="meta field-label field-gap">可拼座位数</view>
   <view class="stepper">
     <view class="step-btn" bindtap="decSeats">−</view>
     <view class="step-num">{{seats}}</view>
@@ -41,8 +72,8 @@
   </view>
 </view>
 
-<view style="padding:20rpx 24rpx 40rpx">
-  <view class="btn-primary {{submitting ? 'disabled' : ''}}" bindtap="onSubmit">
+<view class="submit-bar">
+  <view class="btn-primary page-submit {{submitting ? 'page-submit-disabled' : ''}}" bindtap="onSubmit">
     {{submitting ? '发布中…' : '确认并发布'}}
   </view>
 </view>

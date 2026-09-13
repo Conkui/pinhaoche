@@ -18,6 +18,8 @@
 | 发布已打上 `pages/import` | 确认并发布 | `POST /api/v1/rides/import`（RFC-004） | `ImportRideRequest` + `Idempotency-Key` | 201 `Ride`（status=BOOKED） | 车牌/地点/距离均用户确认；距离标注"截图参考值"（规范 §19） |
 | 地点选择 `pages/place-picker` | 选用地点 | `GET /api/v1/places` | - | `Place[]` | 预设列表 + 底部自定义填写（CUSTOM 不入公共库） |
 | 行程详情 `pages/ride-detail` | 加入 / 不再等人 / 已到达 | ① `GET /api/v1/rides/{id}`<br>② `POST /api/v1/rides/{id}/join`<br>③ `POST /api/v1/rides/{id}/transitions` | ② `Idempotency-Key`<br>③ `{targetStatus, version}` | ②③ 返回最新 `Ride` | 迁移动作：BOOKED→IN_PROGRESS（不再等人）、IN_PROGRESS→ARRIVED（到达）；危险操作二次确认 |
+| 我的发布 `pages/my-rides` | 下架 | ① `GET /api/v1/rides/mine`（RFC-008）<br>② `POST /api/v1/rides/{id}/transitions`（target=CANCELLED） | ② 幂等键按记录持有、失败重试复用 | ① `RideList`（含终态）<br>② 200 | 入口在"我的"页；下架=取消，二次确认；终态只展示不可删 |
+| 发布预打车 `pages/publish`（v2 交互） | 发布 | `GET /places` + `POST /api/v1/rides` | 地点改为**本页内联下拉**（预设 + "其他"→内联输入 CUSTOM），时间用原生 date/time picker；报文结构不变 | 201 `Ride` | 不再跳转 place-picker 页（该页已无入口，待下线） |
 | 聊天 `pages/chat` | 发送 | ① `GET /chat-sessions/{id}/messages?afterId=`<br>② WS `SEND_MESSAGE`<br>③ WS `ENTER_SESSION/EXIT_SESSION`<br>④ `POST /chat-sessions/{id}/read` | ② `{clientMsgId, sessionId, content}` | ② `ACK`（含 messageId）/`ERROR` | 三态气泡 sending/acked/failed；失败重试复用 clientMsgId；断线重连后 afterId 补偿 |
 | 我的·反馈入口 `pages/feedback` | 提交反馈 | `POST /api/v1/feedback`（RFC-006） | `{content(1..500)}` | 204 | 入口放"我的"页，不与主功能抢位置 |
 | 导入·分享文本 | 解析预填 | 本地纯函数 `utils/shareText.ts`（无网络请求） | 分享文本 | provider/车牌/剩余距离候选 | 结果仅预填，提交仍走 `POST /rides/import` 用户确认（规范 §17/§18） |

@@ -12,7 +12,15 @@ interface PrebookCard {
   seats: number
   remark: string
   statusLabel: string
+  /** 状态标签语义着色类（RFC-007）：仅服务于样式，不影响业务逻辑 */
+  statusClass: string
   joinable: boolean
+}
+
+/** 状态 → 语义标签色：待同行=蓝 info、匹配中=绿 success，其余（已满/过期等）=中性灰 */
+const STATUS_TAG_CLASS: Record<string, string> = {
+  PUBLISHED: 'status-tag-info',
+  MATCHING: 'status-tag-success',
 }
 
 const JOINABLE = ['PUBLISHED', 'MATCHING', 'BOOKED']
@@ -48,6 +56,7 @@ Page({
             seats: remainingSeats(r.memberCount, r.capacity),
             remark: r.remark ?? '',
             statusLabel: STATUS_LABELS[r.status] ?? r.status,
+            statusClass: STATUS_TAG_CLASS[r.status] ?? 'status-tag-neutral',
             joinable: JOINABLE.includes(r.status) && remainingSeats(r.memberCount, r.capacity) > 0,
           })),
         })

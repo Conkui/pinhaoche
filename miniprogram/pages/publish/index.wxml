@@ -1,26 +1,59 @@
 <view class="card">
-  <view class="meta" style="margin-bottom:12rpx">出发地</view>
-  <view class="picker-row" bindtap="pickOrigin">
-    <text>{{origin.text || '请选择地点'}}</text>
+  <!-- 出发地：本页内联下拉（预设地点 + 末尾"其他"），不再跳转地点选择页 -->
+  <view class="meta field-label">出发地</view>
+  <picker mode="selector" range="{{placeOptions}}" bindchange="onOriginPick">
+    <view class="picker-row">
+      <text class="picker-text {{origin ? 'picker-text-set' : 'picker-text-hint'}}">{{origin ? origin.text : '请选择出发地'}}</text>
+      <text class="picker-arrow">▾</text>
+    </view>
+  </picker>
+  <view wx:if="{{placesError}}" class="place-retry" bindtap="loadPlaces">预设地点加载失败，点击重试</view>
+  <view wx:elif="{{placesLoading}}" class="meta place-loading">预设地点加载中…（也可直接选"其他"手动填写）</view>
+  <view wx:if="{{originCustomOpen}}" class="custom-panel">
+    <view class="custom-hint">选择"其他"可输入自定义地点</view>
+    <view class="custom-row">
+      <input class="custom-input" value="{{originCustomText}}" bindinput="onOriginCustomInput"
+             maxlength="100" placeholder="如：校门口奶茶店（1-100字）" />
+      <view class="custom-confirm" bindtap="confirmOriginCustom">确认</view>
+    </view>
   </view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">目的地</view>
-  <view class="picker-row" bindtap="pickDestination">
-    <text>{{destination.text || '请选择地点'}}</text>
+  <view class="meta field-label field-gap">目的地</view>
+  <picker mode="selector" range="{{placeOptions}}" bindchange="onDestinationPick">
+    <view class="picker-row">
+      <text class="picker-text {{destination ? 'picker-text-set' : 'picker-text-hint'}}">{{destination ? destination.text : '请选择目的地'}}</text>
+      <text class="picker-arrow">▾</text>
+    </view>
+  </picker>
+  <view wx:if="{{destinationCustomOpen}}" class="custom-panel">
+    <view class="custom-hint">选择"其他"可输入自定义地点</view>
+    <view class="custom-row">
+      <input class="custom-input" value="{{destinationCustomText}}" bindinput="onDestinationCustomInput"
+             maxlength="100" placeholder="如：高铁站南出口（1-100字）" />
+      <view class="custom-confirm" bindtap="confirmDestinationCustom">确认</view>
+    </view>
   </view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">出发时间</view>
-  <view style="display:flex;gap:16rpx">
-    <picker mode="date" value="{{departDate}}" start="{{minDate}}" bindchange="onDateChange" style="flex:1">
-      <view class="picker-row">{{departDate}}</view>
+  <!-- 出发时间：原生 date/time 双滚轮并排，一个圆角分组框 -->
+  <view class="meta field-label field-gap">出发时间</view>
+  <view class="time-group">
+    <picker mode="date" value="{{departDate}}" start="{{minDate}}" bindchange="onDateChange" class="time-picker">
+      <view class="time-cell">
+        <text class="time-label">日期</text>
+        <text class="time-value">{{departDate}}</text>
+      </view>
     </picker>
-    <picker mode="time" value="{{departTime}}" bindchange="onTimeChange" style="flex:1">
-      <view class="picker-row">{{departTime}}</view>
+    <view class="time-divider"></view>
+    <picker mode="time" value="{{departTime}}" bindchange="onTimeChange" class="time-picker">
+      <view class="time-cell">
+        <text class="time-label">时间</text>
+        <text class="time-value">{{departTime}}</text>
+      </view>
     </picker>
   </view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">当前同行人数 / 最大人数</view>
-  <view style="display:flex;align-items:center;gap:24rpx">
+  <view class="meta field-label field-gap">当前同行人数 / 最大人数</view>
+  <view class="stepper-row">
     <view class="stepper">
       <view class="step-btn" bindtap="decMember">−</view>
       <view class="step-num">{{memberCount}}</view>
@@ -34,12 +67,12 @@
     </view>
   </view>
 
-  <view class="meta" style="margin:24rpx 0 12rpx">备注（选填）</view>
+  <view class="meta field-label field-gap">备注（选填）</view>
   <input class="remark-input" value="{{remark}}" bindinput="onRemark" maxlength="300" placeholder="如：行李多、希望女生同行等" />
 </view>
 
-<view style="padding:20rpx 24rpx 40rpx">
-  <view class="btn-primary {{submitting ? 'disabled' : ''}}" bindtap="onSubmit">
+<view class="submit-bar">
+  <view class="btn-primary page-submit {{submitting ? 'page-submit-disabled' : ''}}" bindtap="onSubmit">
     {{submitting ? '发布中…' : '发布'}}
   </view>
 </view>

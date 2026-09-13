@@ -12,11 +12,16 @@
 
 <block wx:else>
   <view class="card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
-    <view class="route-line">{{item.route}}</view>
+    <!-- 标题行右侧浅灰 ›：暗示整卡可点进详情（点击行为仍是原有的 bindtap） -->
+    <view class="prebook-head">
+      <view class="route-line">{{item.route}}</view>
+      <view class="prebook-chevron">›</view>
+    </view>
     <view class="meta" style="margin-top:8rpx">今天 {{item.depart}} 出发</view>
     <view class="meta">已有 {{item.joined}} 人 · 还可加入 {{item.seats}} 人</view>
     <view class="meta" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
-    <view style="margin-top:16rpx"><text class="tag">{{item.statusLabel}}</text></view>
+    <!-- 状态标签按语义着色（ts 侧映射）：待同行=蓝 info、匹配中=绿 success、已满/过期=灰 neutral -->
+    <view style="margin-top:16rpx"><text class="{{item.statusClass}}">{{item.statusLabel}}</text></view>
     <view style="margin-top:20rpx" wx:if="{{item.joinable}}">
       <view class="btn-primary" data-id="{{item.id}}" catchtap="contactOwner">联系发布者</view>
     </view>

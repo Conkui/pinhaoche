@@ -1,0 +1,89 @@
+/* 我的发布页：全局令牌见 app.wxss，本页只定义卡片容器/状态标签配色/下架按钮 */
+page {
+  background: #f5f7fa;
+}
+
+.ride-card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin: 20rpx 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.06);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ride-card .meta {
+  margin-top: 8rpx;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+/* 状态标签配色（复用全局 .tag 底样式，按状态叠加） */
+.tag-info {
+  background: #e8f1ff;
+  color: #1677ff;
+}
+
+.tag-success {
+  background: #e6f7ef;
+  color: #52c41a;
+}
+
+.tag-warn {
+  background: #fff4e5;
+  color: #faad14;
+}
+
+.tag-muted {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+
+/* 下架 = 危险操作：描边而非实心，弱化层级（卡片主操作是进入详情） */
+.cancel-wrap {
+  margin-top: 20rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  border: 1rpx solid #ff4d4f;
+  color: #ff4d4f;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  padding: 12rpx 40rpx;
+  text-align: center;
+}
+
+.btn-cancel.disabled {
+  opacity: 0.5;
+}
+
+/* 加载 / 失败 / 空态 */
+.state-block {
+  padding: 120rpx 40rpx;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 28rpx;
+}
+
+.state-block .retry {
+  color: #1677ff;
+  margin-top: 24rpx;
+}
+
+.empty-title {
+  color: #1f2937;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.empty-sub {
+  color: #9ca3af;
+}

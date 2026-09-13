@@ -1,45 +1,124 @@
-/* 导入页 */
+/* 导入页局部样式：沿用全局视觉令牌（主色 #1677ff / 卡片白底 / 间距 8rpx 倍数），本页仅做强化覆盖 */
+
+.field-label {
+  margin-bottom: 16rpx;
+}
+
+.field-gap {
+  margin-top: 32rpx;
+}
+
 .share-input {
   width: 100%;
   min-height: 160rpx;
-  background: #f9fafb;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
   box-sizing: border-box;
   font-size: 28rpx;
 }
 
+/* 内联下拉触发行：浅灰底 + 右侧箭头，与全局 picker-row 类名叠加 */
 .picker-row {
-  background: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.picker-text {
+  font-size: 30rpx;
+}
+
+.picker-text-set {
+  color: #1f2937;
+}
+
+.picker-text-hint {
+  color: #9ca3af;
+}
+
+.picker-arrow {
+  color: #9ca3af;
+  font-size: 24rpx;
+  margin-left: 16rpx;
+}
+
+.place-retry {
+  margin-top: 16rpx;
+  color: #1677ff;
+  font-size: 26rpx;
+}
+
+/* "其他"展开的自定义输入面板：提示行用弱化色 #9ca3af */
+.custom-panel {
+  margin-top: 16rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.custom-hint {
+  color: #9ca3af;
+  font-size: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.custom-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.custom-input {
+  flex: 1;
+  background: #ffffff;
   border-radius: 12rpx;
-  padding: 20rpx 24rpx;
-  color: #111827;
+  padding: 16rpx 24rpx;
+  font-size: 28rpx;
+}
+
+.custom-confirm {
+  flex-shrink: 0;
+  color: #ffffff;
+  background: #1677ff;
+  border-radius: 12rpx;
+  padding: 16rpx 32rpx;
+  font-size: 28rpx;
 }
 
 .plate-input {
-  background: #f9fafb;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.wait-row {
+  display: flex;
+  gap: 16rpx;
 }
 
 .wait-chip {
-  background: #f9fafb;
+  background: #f5f7fa;
   border-radius: 999rpx;
   padding: 12rpx 32rpx;
   color: #6b7280;
 }
 
 .wait-chip-on {
-  background: #eef1f6;
-  color: #576b95;
+  background: rgba(22, 119, 255, 0.1);
+  color: #1677ff;
   font-weight: 600;
 }
 
+/* stepper：间距取 8rpx 倍数，加减号用主色 */
 .stepper {
   display: flex;
   align-items: center;
-  background: #f9fafb;
-  border-radius: 12rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
   width: fit-content;
 }
 
@@ -49,7 +128,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #576b95;
+  color: #1677ff;
   font-size: 40rpx;
 }
 
@@ -57,4 +136,22 @@
   min-width: 64rpx;
   text-align: center;
   font-weight: 600;
+  color: #1f2937;
+}
+
+/* 提交按钮：通栏渐变主按钮（覆盖全局 btn-primary 的纯色背景） */
+.submit-bar {
+  padding: 24rpx 24rpx 40rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+}
+
+.page-submit {
+  background: linear-gradient(90deg, #1677ff, #4d9bff);
+  border-radius: 20rpx;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.06);
+}
+
+.page-submit-disabled {
+  background: #c6cbd4;
+  box-shadow: none;
 }

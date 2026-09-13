@@ -57,6 +57,11 @@ export function getRide(rideId: number): Promise<Ride> {
   return request<Ride>(`/rides/${rideId}`)
 }
 
+/** RFC-008：我发布的全部行程（含 CANCELLED/EXPIRED/CLOSED 终态），按创建时间倒序。 */
+export function listMine(): Promise<Ride[]> {
+  return request<Ride[]>('/rides/mine')
+}
+
 /** 发布预打车。idempotencyKey 由页面生成并持有：失败重试复用同一个 key。 */
 export function createRide(req: CreateRideRequest, idempotencyKey: string): Promise<Ride> {
   return request<Ride>('/rides', { method: 'POST', data: req, idempotencyKey })

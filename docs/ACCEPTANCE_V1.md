@@ -61,4 +61,5 @@
 2. `ride_member` 复合主键被映射为自增 id（`Unknown column 'rm1_0.id'`）——改 `@IdClass`。
 3. `@Modifying` 批量更新后一级缓存返回旧实体（join 响应显示旧状态）——`clearAutomatically/flushAutomatically=true`。
 4. 聊天重复 `clientMsgId` 插入污染 Hibernate 会话（提交时 "don't flush the Session after an exception occurs"）——插入隔离到 `TransactionTemplate` 独立事务，重复时新事务读回既有消息。
-5. 环境类（非代码）：宿主机 3306/5672/6379 等端口被占用或落在 Windows 排除段 → compose 端口映射 23306/25672/16379；Git Bash 向 curl 传中文 argv 乱码 → 测试脚本统一 `--data-binary @file`。
+5. **高并发抢位重试死循环**（压测发现）：MySQL 默认 REPEATABLE READ 下，抢位失败的事务重试时读到的仍是本事务快照的旧 `version`，重试注定失败（实测 50 并发抢 7 座只成功 5 个）——join 事务改为 `READ_COMMITTED` 隔离级 + 重试 8 次，修复后恰好 7 成功、0 超卖。该问题与规范 §20 的条件更新组合使用时必须注意。
+6. 环境类（非代码）：宿主机 3306/5672/6379 等端口被占用或落在 Windows 排除段 → compose 端口映射 23306/25672/16379；Git Bash 向 curl 传中文 argv 乱码 → 测试脚本统一 `--data-binary @file`。

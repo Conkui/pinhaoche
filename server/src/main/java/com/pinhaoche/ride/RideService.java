@@ -85,6 +85,13 @@ public class RideService {
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
     }
 
+    /** RFC-008：我的发布（含已取消/过期/结束），供"我的发布"管理页使用。 */
+    @Transactional(readOnly = true)
+    public List<RideDto> listMine(long ownerId) {
+        return rideRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId)
+                .stream().map(RideService::toDto).toList();
+    }
+
     // ---------- 发布（预打车，幂等接口） ----------
 
     @Transactional

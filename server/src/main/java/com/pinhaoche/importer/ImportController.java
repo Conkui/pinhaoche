@@ -22,6 +22,7 @@ public class ImportController {
     }
 
     @PostMapping("/rides/import")
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.CREATED) // openapi 契约：201 Created
     public RideService.RideDto importRide(@RequestHeader("Idempotency-Key") String idempotencyKey,
                                           @RequestBody ImportService.ImportRideRequest request,
                                           HttpServletRequest http) {

@@ -15,6 +15,10 @@ paths:
       parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateRideRequest' } } } }
       responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Ride' } } } }, '409': { $ref: '#/components/responses/Conflict' } }
+  /rides/mine:
+    get:
+      summary: 当前用户发布的全部行程（RFC-008，含终态）
+      responses: { '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/RideList' } } } } }
   /rides/{rideId}:
     get:
       parameters: [{ $ref: '#/components/parameters/RideId' }]

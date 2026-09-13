@@ -1,66 +1,104 @@
-/* 全局样式：按 UI_SPEC 的 WeUI/HIG 克制风格。白卡片 + 浅灰背景 + 系统蓝主色 + 统一圆角。 */
+/* ============================================================
+   全局设计令牌（RFC-007：参考 Ant Design 5 的视觉升级）
+   - 主色 #1677ff；页面背景 #f5f7fa；白卡片 + 极浅投影
+   - 字阶：页面大标题 34rpx/600、卡片标题/路线 32rpx/600、正文 28rpx、辅助 24rpx
+   - 间距一律取 8rpx 的倍数
+   - 红线：投影透明度全部 ≤ 0.25，且只允许用于按钮与卡片，
+     避免违反 UI_SPEC"克制、禁止重阴影"的约定
+   注意：card / btn-primary / btn-primary.disabled / btn-plain /
+   route-line / route-arrow / meta / meta-strong / state-block /
+   retry / tag / tag-disabled 为既有类名，其他页面与 Agent 在消费，
+   只允许改实现、不允许删类。
+   ============================================================ */
+
 page {
-  background: #f3f4f6;
+  /* 页面底色提亮为 #f5f7fa，与白卡片形成更柔和的层次（替代原 #f3f4f6） */
+  background: #f5f7fa;
   color: #1f2937;
-  font-size: 30rpx;
+  font-size: 28rpx;
   line-height: 1.5;
 }
 
-/* 白色内容卡片：唯一的内容容器风格，禁止额外阴影层次 */
+/* ---------- 卡片 ---------- */
+
+/* 白卡片：圆角 20rpx + 极浅投影，是全部内容容器的统一风格 */
 .card {
   background: #ffffff;
-  border-radius: 16rpx;
+  border-radius: 20rpx;
   padding: 28rpx;
   margin: 20rpx 24rpx;
+  /* RFC-007 唯一允许的卡片投影：极浅冷灰，仅提供"浮起"暗示 */
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.06);
 }
 
-/* 主操作按钮：每页只有一个 primary（UI_SPEC 硬性要求） */
+/* 卡片标题：32rpx/600，与页面大标题(34rpx)拉开字阶层级 */
+.card-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* ---------- 按钮 ---------- */
+
+/* 主操作按钮：每页只有一个 primary（UI_SPEC 硬性要求）。
+   原 #576b95 微信蓝灰升级为 Ant Design 主色自顶向下轻渐变 + 柔和投影，
+   属 RFC-007 明确允许的轻渐变，不是大面积渐变。 */
 .btn-primary {
-  background: #576b95;
+  background: linear-gradient(180deg, #4096ff, #1677ff);
   color: #ffffff;
-  border-radius: 12rpx;
+  border-radius: 16rpx;
   font-size: 32rpx;
   padding: 22rpx 0;
   text-align: center;
+  box-shadow: 0 6rpx 16rpx rgba(22, 119, 255, 0.25);
 }
 
+/* 禁用态：去渐变去投影，固定浅蓝 #bbcaf4 表达"不可点"，避免灰蓝混淆 */
 .btn-primary.disabled {
-  background: #c6cbd4;
+  background: #bbcaf4;
+  box-shadow: none;
 }
 
+/* 次要按钮：白底主色文字 + 半透明主色描边，与 primary 形成"实/虚"层级 */
 .btn-plain {
   background: #ffffff;
-  color: #576b95;
-  border: 1rpx solid #576b95;
-  border-radius: 12rpx;
+  color: #1677ff;
+  border: 1rpx solid rgba(22, 119, 255, 0.45);
+  border-radius: 16rpx;
   font-size: 30rpx;
   padding: 18rpx 0;
   text-align: center;
 }
 
-/* 路线展示：出发地 → 目的地 是卡片视觉第一位（UI_SPEC） */
+/* ---------- 路线展示 ---------- */
+
+/* 路线是卡片视觉第一位：32rpx/600 深色（RFC-007 字阶，原 36rpx 收敛到字阶体系） */
 .route-line {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 600;
-  color: #111827;
+  color: #1f2937;
 }
 
+/* 箭头改主色，用颜色引导视线从出发地读到目的地 */
 .route-arrow {
-  color: #9ca3af;
+  color: #1677ff;
   margin: 0 12rpx;
 }
 
+/* ---------- 文本 ---------- */
+
 .meta {
   color: #6b7280;
-  font-size: 26rpx;
+  font-size: 24rpx;
 }
 
 .meta-strong {
-  color: #111827;
+  color: #1f2937;
   font-weight: 600;
 }
 
-/* 列表空态 / 加载 / 失败重试 */
+/* ---------- 列表四态：加载 / 空态 / 失败重试 / 已满 ---------- */
+
 .state-block {
   padding: 120rpx 40rpx;
   text-align: center;
@@ -68,15 +106,19 @@ page {
   font-size: 28rpx;
 }
 
+/* 重试是失败态的唯一出口，必须用主色让用户第一眼找到 */
 .state-block .retry {
-  color: #576b95;
+  color: #1677ff;
   margin-top: 24rpx;
 }
 
+/* ---------- 标签 ---------- */
+
+/* 中性标签：保留原类名供旧 wxml 兼容，语义弱化为浅灰 */
 .tag {
   display: inline-block;
-  background: #eef1f6;
-  color: #576b95;
+  background: #f3f4f6;
+  color: #6b7280;
   border-radius: 8rpx;
   padding: 4rpx 14rpx;
   font-size: 24rpx;
@@ -85,4 +127,53 @@ page {
 .tag-disabled {
   background: #f3f4f6;
   color: #9ca3af;
+}
+
+/* ---------- 语义状态标签（RFC-007 功能色，Agent B/C 可直接消费） ----------
+   每个类自带完整属性，wxml 单独引用也能生效：
+   info=进行中/可加入  success=匹配顺利  warning=需要留意
+   danger=失败/异常    neutral=已满/已过期等终态 */
+.status-tag-info {
+  display: inline-block;
+  background: #e6f4ff;
+  color: #1677ff;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
+}
+
+.status-tag-success {
+  display: inline-block;
+  background: #f6ffed;
+  color: #52c41a;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
+}
+
+.status-tag-warning {
+  display: inline-block;
+  background: #fffbe6;
+  color: #d48806;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
+}
+
+.status-tag-danger {
+  display: inline-block;
+  background: #fff1f0;
+  color: #ff4d4f;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
+}
+
+.status-tag-neutral {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
 }

@@ -15,6 +15,9 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
 
     List<Ride> findByStatusOrderByUpdatedAtDesc(RideStatus status);
 
+    /** RFC-008：我的发布（含终态），按创建时间倒序。 */
+    List<Ride> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
+
     /**
      * 预打车列表（用户红线：时间效益）——只返回未过出发时间的单，
      * 已过出发时间的拼车单对任何人都不再展示，避免"今天还能看到昨天的单"。

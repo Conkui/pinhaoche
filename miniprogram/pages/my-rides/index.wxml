@@ -1,0 +1,29 @@
+<view wx:if="{{loading}}" class="state-block">加载中…</view>
+
+<view wx:elif="{{loadFailed}}" class="state-block">
+  <view>加载失败</view>
+  <view class="retry" bindtap="retry">点击重试</view>
+</view>
+
+<view wx:elif="{{cards.length === 0}}" class="state-block">
+  <view class="empty-title">你还没有发布过行程</view>
+  <view class="empty-sub">去"预打车"页发布一条，之后可以在这里管理和下架</view>
+</view>
+
+<block wx:else>
+  <view class="ride-card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
+    <view class="card-top">
+      <view class="route-line">{{item.route}}</view>
+      <text class="tag {{item.tagClass}}">{{item.statusLabel}}</text>
+    </view>
+    <view class="meta">{{item.depart}} 出发</view>
+    <view class="meta">{{item.members}}</view>
+    <view class="meta" wx:if="{{item.plate}}">车牌 {{item.plate}}</view>
+    <view class="cancel-wrap" wx:if="{{item.active}}">
+      <view class="btn-cancel {{item.canceling ? 'disabled' : ''}}"
+            data-id="{{item.id}}" catchtap="onTakeDown">
+        {{item.canceling ? '下架中…' : '下架'}}
+      </view>
+    </view>
+  </view>
+</block>
