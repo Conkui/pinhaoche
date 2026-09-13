@@ -1,0 +1,82 @@
+// Ride 服务：列表/详情/发布/加入/状态迁移/导入（openapi /rides 系列）。
+import { request } from './request'
+
+export type RideStatus =
+  | 'DRAFT' | 'PUBLISHED' | 'MATCHING' | 'BOOKED' | 'IN_PROGRESS'
+  | 'ARRIVED' | 'CLOSED' | 'CANCELLED' | 'EXPIRED'
+
+export interface PlaceRef {
+  type: 'PRESET' | 'CUSTOM'
+  placeId?: number | null
+  text: string
+}
+
+export interface Ride {
+  id: number
+  ownerId: number
+  origin: PlaceRef
+  destination: PlaceRef
+  departTime: string
+  memberCount: number
+  capacity: number
+  status: RideStatus
+  plateNumber?: string | null
+  provider?: string | null
+  remainingDistance?: number | null
+  distanceUpdatedAt?: string | null
+  waitingMinutes?: number | null
+  version: number
+  remark?: string | null
+}
+
+export interface CreateRideRequest {
+  origin: PlaceRef
+  destination: PlaceRef
+  departTime: string
+  memberCount: number
+  capacity: number
+  remark?: string
+  waitingMinutes?: number | null
+}
+
+export interface ImportRideRequest {
+  provider: 'DIDI' | 'HUAXIAOZHU' | 'OTHER'
+  plateNumber: string
+  origin: PlaceRef
+  destination: PlaceRef
+  remainingDistance?: number | null
+  waitingMinutes?: number | null
+  seats?: number
+}
+
+export function listRides(view: 'PREBOOK' | 'BOOKED'): Promise<Ride[]> {
+  return request<Ride[]>(`/rides?view=${view}`)
+}
+
+export function getRide(rideId: number): Promise<Ride> {
+  return request<Ride>(`/rides/${rideId}`)
+}
+
+/** 发布预打车。idempotencyKey 由页面生成并持有：失败重试复用同一个 key。 */
+export function createRide(req: CreateRideRequest, idempotencyKey: string): Promise<Ride> {
+  return request<Ride>('/rides', { method: 'POST', data: req, idempotencyKey })
+}
+
+export function joinRide(rideId: number, idempotencyKey: string): Promise<Ride> {
+  return request<Ride>(`/rides/${rideId}/join`, { method: 'POST', idempotencyKey })
+}
+
+/** 显式状态迁移（取消 / 不再等人 / 到达 / 完成）。失败重试复用 key。 */
+export function transitRide(rideId: number, targetStatus: RideStatus, version: number,
+                            idempotencyKey: string): Promise<Ride> {
+  return request<Ride>(`/rides/${rideId}/transitions`, {
+    method: 'POST',
+    data: { targetStatus, version },
+    idempotencyKey,
+  })
+}
+
+/** 导入"已打上"（RFC-004）：字段经用户确认后提交。 */
+export function importRide(req: ImportRideRequest, idempotencyKey: string): Promise<Ride> {
+  return request<Ride>('/rides/import', { method: 'POST', data: req, idempotencyKey })
+}

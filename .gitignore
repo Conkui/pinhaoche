@@ -1,0 +1,11 @@
+# 构建产物与临时文件
+server/target/
+node_modules/
+**/node_modules/
+*.log
+scripts/q_*.json
+scripts/r*.json
+scripts/code_*.txt
+scripts/.rid15
+docs/ui-preview/preview-*.png
+.DS_Store

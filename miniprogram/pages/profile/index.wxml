@@ -1,0 +1,26 @@
+<view wx:if="{{user}}" class="card">
+  <view style="display:flex;align-items:center">
+    <image src="{{user.avatar || '/images/avatar-default.png'}}" style="width:96rpx;height:96rpx;border-radius:48rpx;background:#e5e7eb" />
+    <view style="margin-left:24rpx">
+      <view style="font-weight:600;font-size:34rpx">{{user.nickname}}</view>
+      <view class="meta">ID {{user.id}}</view>
+    </view>
+  </view>
+</view>
+
+<view wx:else class="state-block">登录中…</view>
+
+<view class="card">
+  <view class="profile-row" bindtap="goFeedback">
+    <text>意见反馈</text>
+    <text class="meta">›</text>
+  </view>
+</view>
+
+<view class="card">
+  <view class="meta">拼好车 · 面向学校学生的拼车小程序</view>
+  <view class="meta" style="margin-top:8rpx">版本 {{version}}（契约 CONTRACT_FREEZE_V1）</view>
+  <view style="margin-top:24rpx">
+    <view class="btn-plain" bindtap="relogin">重新登录</view>
+  </view>
+</view>

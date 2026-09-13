@@ -1,0 +1,100 @@
+/* 聊天页 */
+page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f3f4f6;
+}
+
+.conn-tip {
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 24rpx;
+  text-align: center;
+  padding: 8rpx 0;
+}
+
+.chat-scroll {
+  flex: 1;
+  padding: 20rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 24rpx;
+}
+
+.row-mine {
+  align-items: flex-end;
+}
+
+.bubble {
+  max-width: 70%;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 18rpx 24rpx;
+  font-size: 30rpx;
+  word-break: break-all;
+}
+
+.bubble-mine {
+  background: #576b95;
+  color: #ffffff;
+}
+
+.bubble-meta {
+  font-size: 22rpx;
+  color: #9ca3af;
+  margin-top: 6rpx;
+}
+
+.state-failed {
+  color: #dc2626;
+}
+
+.quick-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 12rpx 24rpx;
+  background: #f9fafb;
+}
+
+.quick-chip {
+  background: #ffffff;
+  border-radius: 999rpx;
+  padding: 10rpx 24rpx;
+  font-size: 26rpx;
+  color: #374151;
+}
+
+.input-bar {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+}
+
+.chat-input {
+  flex: 1;
+  background: #f3f4f6;
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
+  font-size: 30rpx;
+}
+
+.send-btn {
+  background: #576b95;
+  color: #ffffff;
+  border-radius: 12rpx;
+  padding: 16rpx 36rpx;
+  font-size: 30rpx;
+}
+
+.send-btn-off {
+  background: #c6cbd4;
+}

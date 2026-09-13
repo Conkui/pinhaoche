@@ -1,0 +1,56 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pinhaoche
+      MYSQL_USER: pinhaoche
+      MYSQL_PASSWORD: pinhaoche
+      TZ: UTC
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 宿主机 3306 被占用、13306 落在 Windows 排除段，改用 23306；容器内部仍 3306
+      - "23306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      # 宿主机 6379 落在 Windows 排除端口段（6336-6435），改用 16379；容器内部仍 6379
+      - "16379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      # 宿主机 5672/5673 落在 Windows 排除端口段（5636-6635），改用 25672；容器内部仍 5672
+      - "25672:5672"
+      - "15672:15672"
+
+  server:
+    build: ./server
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: pinhaoche
+      DB_USER: pinhaoche
+      DB_PASSWORD: pinhaoche
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      WECHAT_MOCK: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+
+volumes:
+  mysql-data:

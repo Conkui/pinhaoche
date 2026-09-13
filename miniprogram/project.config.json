@@ -1,0 +1,12 @@
+{
+  "compileType": "miniprogram",
+  "setting": {
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "useCompilerPlugins": ["typescript"]
+  },
+  "appid": "touristappid",
+  "projectname": "pinhaoche-miniprogram",
+  "libVersion": "3.4.10"
+}

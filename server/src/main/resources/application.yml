@@ -1,0 +1,51 @@
+# 拼好车后端配置。所有环境相关值用环境变量覆盖；本地默认值面向 docker-compose。
+spring:
+  application:
+    name: pinhaoche-server
+  datasource:
+    # characterEncoding 用 Java 字符集名；Connector/J 8 会自动映射到 MySQL utf8mb4
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:pinhaoche}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+    username: ${DB_USER:pinhaoche}
+    password: ${DB_PASSWORD:pinhaoche}
+  jpa:
+    hibernate:
+      ddl-auto: none # 表结构只归 Flyway 管（规范：数据库结构只能通过 Flyway 修改）
+    open-in-view: false
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    com.pinhaoche: INFO
+
+app:
+  # 微信登录接口化：mock 模式下 code 即 openid（dev/联调用），生产必须置 false 走真实 jscode2session。
+  wechat:
+    mock: ${WECHAT_MOCK:true}
+    appid: ${WECHAT_APPID:}
+    secret: ${WECHAT_SECRET:}
+  token-ttl-hours: ${TOKEN_TTL_HOURS:72}
+  # 管理端接口的共享密钥（RFC-005），生产必须更换。
+  admin-key: ${ADMIN_KEY:dev-admin-key}
+  outbox:
+    poll-interval-ms: 500
+
+phc:
+  rabbit:
+    exchange: phc.outbox
+    queue: phc.outbox.notify

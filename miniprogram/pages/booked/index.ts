@@ -1,0 +1,87 @@
+// 已打上列表（首页）。视觉顺序：出发地→目的地 / 立即联系 / 余位 / 车牌 / 剩余距离（UI_SPEC）。
+import * as rideApi from '../../services/ride'
+import { Ride } from '../../services/ride'
+import { formatDistance, remainingSeats, waitingText } from '../../utils/format'
+
+interface BookedCard {
+  id: number
+  ownerId: number
+  route: string
+  seats: number
+  plate: string
+  distance: string
+  waiting: string
+  status: string
+}
+
+Page({
+  data: {
+    loading: true,
+    loadFailed: false,
+    cards: [] as BookedCard[],
+  },
+
+  onShow() {
+    this.reload()
+  },
+
+  onPullDownRefresh() {
+    this.reload(() => wx.stopPullDownRefresh())
+  },
+
+  reload(done?: () => void) {
+    const app = getApp()
+    app.ensureLogin()
+      .then(() => rideApi.listRides('BOOKED'))
+      .then((rides: Ride[]) => {
+        this.setData({
+          loading: false,
+          loadFailed: false,
+          cards: rides.map((r) => ({
+            id: r.id,
+            ownerId: r.ownerId,
+            route: `${r.origin.text} → ${r.destination.text}`,
+            seats: remainingSeats(r.memberCount, r.capacity),
+            plate: r.plateNumber ?? '',
+            distance: formatDistance(r.remainingDistance, r.distanceUpdatedAt),
+            waiting: waitingText(r.waitingMinutes),
+            status: r.status,
+          })),
+        })
+        done?.()
+      })
+      .catch(() => {
+        this.setData({ loading: false, loadFailed: true })
+        done?.()
+      })
+  },
+
+  retry() {
+    this.setData({ loading: true, loadFailed: false })
+    this.reload()
+  },
+
+  /** Primary Action：立即联系车主 → 复用/创建会话 → 聊天页（规范 §10）。 */
+  contactOwner(e: WechatMiniprogram.TouchEvent) {
+    const card = this.data.cards.find((c) => c.id === e.currentTarget.dataset.id)
+    if (!card) {
+      return
+    }
+    const app = getApp()
+    wx.showLoading({ title: '连接中' })
+    app.ensureLogin()
+      .then(() => require('../../services/chat').ensureSession(card.id, card.ownerId))
+      .then((session: { id: number; peerUserId: number }) => {
+        wx.hideLoading()
+        wx.navigateTo({ url: `/pages/chat/index?sessionId=${session.id}&peerUserId=${session.peerUserId}` })
+      })
+      .catch((err: Error) => {
+        wx.hideLoading()
+        wx.showToast({ title: err.message, icon: 'none' })
+      })
+  },
+
+  goImport() {
+    wx.navigateTo({ url: '/pages/import/index' })
+  },
+})

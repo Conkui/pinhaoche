@@ -1,0 +1,45 @@
+<view class="card">
+  <view class="meta" style="margin-bottom:12rpx">出发地</view>
+  <view class="picker-row" bindtap="pickOrigin">
+    <text>{{origin.text || '请选择地点'}}</text>
+  </view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">目的地</view>
+  <view class="picker-row" bindtap="pickDestination">
+    <text>{{destination.text || '请选择地点'}}</text>
+  </view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">出发时间</view>
+  <view style="display:flex;gap:16rpx">
+    <picker mode="date" value="{{departDate}}" start="{{minDate}}" bindchange="onDateChange" style="flex:1">
+      <view class="picker-row">{{departDate}}</view>
+    </picker>
+    <picker mode="time" value="{{departTime}}" bindchange="onTimeChange" style="flex:1">
+      <view class="picker-row">{{departTime}}</view>
+    </picker>
+  </view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">当前同行人数 / 最大人数</view>
+  <view style="display:flex;align-items:center;gap:24rpx">
+    <view class="stepper">
+      <view class="step-btn" bindtap="decMember">−</view>
+      <view class="step-num">{{memberCount}}</view>
+      <view class="step-btn" bindtap="incMember">＋</view>
+    </view>
+    <view class="meta">/</view>
+    <view class="stepper">
+      <view class="step-btn" bindtap="decCapacity">−</view>
+      <view class="step-num">{{capacity}}</view>
+      <view class="step-btn" bindtap="incCapacity">＋</view>
+    </view>
+  </view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">备注（选填）</view>
+  <input class="remark-input" value="{{remark}}" bindinput="onRemark" maxlength="300" placeholder="如：行李多、希望女生同行等" />
+</view>
+
+<view style="padding:20rpx 24rpx 40rpx">
+  <view class="btn-primary {{submitting ? 'disabled' : ''}}" bindtap="onSubmit">
+    {{submitting ? '发布中…' : '发布'}}
+  </view>
+</view>

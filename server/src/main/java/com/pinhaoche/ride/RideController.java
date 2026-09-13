@@ -1,0 +1,71 @@
+package com.pinhaoche.ride;
+
+import com.pinhaoche.common.auth.AuthInterceptor;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/** Ride 接口（openapi: /rides, /rides/{rideId}, /rides/{rideId}/join, /rides/{rideId}/transitions）。 */
+@RestController
+@RequestMapping("/api/v1")
+public class RideController {
+
+    private final RideService rideService;
+
+    public RideController(RideService rideService) {
+        this.rideService = rideService;
+    }
+
+    @GetMapping("/rides")
+    public List<RideService.RideDto> list(@RequestParam String view) {
+        return rideService.list(view);
+    }
+
+    @GetMapping("/rides/{rideId}")
+    public RideService.RideDto get(@PathVariable long rideId) {
+        return rideService.get(rideId);
+    }
+
+    @PostMapping("/rides")
+    public RideService.RideDto create(
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @Valid @RequestBody RideService.CreateRideRequest request,
+            jakarta.servlet.http.HttpServletRequest http) {
+        long userId = userId(http);
+        return rideService.create(userId, request, idempotencyKey);
+    }
+
+    @PostMapping("/rides/{rideId}/join")
+    public RideService.RideDto join(
+            @PathVariable long rideId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            jakarta.servlet.http.HttpServletRequest http) {
+        return rideService.join(rideId, userId(http), idempotencyKey);
+    }
+
+    @PostMapping("/rides/{rideId}/transitions")
+    public RideService.RideDto transit(
+            @PathVariable long rideId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestBody RideService.TransitionRequest body,
+            jakarta.servlet.http.HttpServletRequest http) {
+        return rideService.transit(rideId, userId(http), body.targetStatus(), body.version(), idempotencyKey);
+    }
+
+    private long userId(jakarta.servlet.http.HttpServletRequest http) {
+        Object v = http.getAttribute(AuthInterceptor.ATTR_USER_ID);
+        if (v == null) {
+            throw com.pinhaoche.common.api.ApiException.unauthorized("未登录");
+        }
+        return (Long) v;
+    }
+}

@@ -1,0 +1,88 @@
+/* 全局样式：按 UI_SPEC 的 WeUI/HIG 克制风格。白卡片 + 浅灰背景 + 系统蓝主色 + 统一圆角。 */
+page {
+  background: #f3f4f6;
+  color: #1f2937;
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+/* 白色内容卡片：唯一的内容容器风格，禁止额外阴影层次 */
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 28rpx;
+  margin: 20rpx 24rpx;
+}
+
+/* 主操作按钮：每页只有一个 primary（UI_SPEC 硬性要求） */
+.btn-primary {
+  background: #576b95;
+  color: #ffffff;
+  border-radius: 12rpx;
+  font-size: 32rpx;
+  padding: 22rpx 0;
+  text-align: center;
+}
+
+.btn-primary.disabled {
+  background: #c6cbd4;
+}
+
+.btn-plain {
+  background: #ffffff;
+  color: #576b95;
+  border: 1rpx solid #576b95;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  padding: 18rpx 0;
+  text-align: center;
+}
+
+/* 路线展示：出发地 → 目的地 是卡片视觉第一位（UI_SPEC） */
+.route-line {
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #111827;
+}
+
+.route-arrow {
+  color: #9ca3af;
+  margin: 0 12rpx;
+}
+
+.meta {
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.meta-strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* 列表空态 / 加载 / 失败重试 */
+.state-block {
+  padding: 120rpx 40rpx;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 28rpx;
+}
+
+.state-block .retry {
+  color: #576b95;
+  margin-top: 24rpx;
+}
+
+.tag {
+  display: inline-block;
+  background: #eef1f6;
+  color: #576b95;
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  font-size: 24rpx;
+}
+
+.tag-disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+}

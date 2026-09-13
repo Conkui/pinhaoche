@@ -1,0 +1,18 @@
+/* 地点选择页 */
+.place-item {
+  padding: 24rpx 8rpx;
+  border-bottom: 1rpx solid #f3f4f6;
+  color: #111827;
+  font-size: 32rpx;
+}
+
+.place-item:last-child {
+  border-bottom: none;
+}
+
+.custom-input {
+  background: #f9fafb;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin-top: 16rpx;
+}

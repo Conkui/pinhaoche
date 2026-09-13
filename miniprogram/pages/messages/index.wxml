@@ -1,0 +1,22 @@
+<view wx:if="{{loading}}" class="state-block">加载中…</view>
+
+<view wx:elif="{{loadFailed}}" class="state-block">
+  <view>加载失败</view>
+  <view class="retry" bindtap="retry">点击重试</view>
+</view>
+
+<view wx:elif="{{sessions.length === 0}}" class="state-block">
+  <view>还没有聊天</view>
+  <view class="meta">在"已打上"或"预打车"里联系车主即可开始</view>
+</view>
+
+<view wx:else>
+  <view class="card" wx:for="{{sessions}}" wx:key="id" data-id="{{item.id}}" bindtap="openChat">
+    <view style="display:flex;justify-content:space-between;align-items:center">
+      <view style="font-weight:600">{{item.title}}</view>
+      <view wx:if="{{item.unread > 0}}" class="tag">{{item.unread}}</view>
+    </view>
+    <view class="meta" style="margin-top:8rpx">{{item.preview}}</view>
+    <view class="meta" wx:if="{{item.time}}">{{item.time}}</view>
+  </view>
+</view>

@@ -1,0 +1,30 @@
+<view wx:if="{{loading}}" class="state-block">加载中…</view>
+
+<view wx:elif="{{loadFailed}}" class="state-block">
+  <view>地点加载失败</view>
+  <view class="retry" bindtap="retry">点击重试</view>
+</view>
+
+<block wx:else>
+  <view wx:if="{{current}}" class="card">
+    <view class="meta">当前选择</view>
+    <view class="route-line" style="margin-top:8rpx">{{current}}</view>
+  </view>
+
+  <view class="card">
+    <view class="meta" style="margin-bottom:12rpx">常用地点</view>
+    <view wx:if="{{places.length === 0}}" class="meta">暂无预设地点</view>
+    <view wx:for="{{places}}" wx:key="id" class="place-item" data-id="{{item.id}}" bindtap="pickPreset">
+      {{item.name}}
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="place-item" bindtap="toggleCustom">＋ 自定义填写</view>
+    <block wx:if="{{showCustom}}">
+      <input class="custom-input" value="{{customText}}" bindinput="onCustomInput"
+             maxlength="100" placeholder="如：XX宿舍楼下 / 万达广场2号门" />
+      <view class="btn-primary" style="margin-top:20rpx" bindtap="confirmCustom">使用该地点</view>
+    </block>
+  </view>
+</block>

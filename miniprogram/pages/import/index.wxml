@@ -1,0 +1,48 @@
+<view class="card">
+  <view class="meta" style="margin-bottom:12rpx">粘贴滴滴/花小猪分享文本（可选，帮您预填）</view>
+  <textarea class="share-input" value="{{shareText}}" bindinput="onShareTextInput" maxlength="1000"
+            placeholder="粘贴行程分享文案…" />
+  <view class="btn-plain" style="margin-top:16rpx" bindtap="parseShare">解析预填</view>
+  <view class="meta" wx:if="{{parseHint}}" style="margin-top:8rpx">{{parseHint}}</view>
+</view>
+
+<view class="card">
+  <view class="meta" style="margin-bottom:12rpx">打车平台</view>
+  <picker range="{{providers}}" range-key="label" value="{{providerIndex}}" bindchange="onProviderChange">
+    <view class="picker-row">{{providers[providerIndex].label}}</view>
+  </picker>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">车牌号（必填）</view>
+  <input class="plate-input" value="{{plateNumber}}" bindinput="onPlate" maxlength="32" placeholder="如：苏A12345" />
+
+  <view class="meta" style="margin:24rpx 0 12rpx">出发地</view>
+  <view class="picker-row" bindtap="pickOrigin"><text>{{origin.text || '请选择地点'}}</text></view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">目的地</view>
+  <view class="picker-row" bindtap="pickDestination"><text>{{destination.text || '请选择地点'}}</text></view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">剩余距离（选填，按 App 截图填写）</view>
+  <input class="plate-input" type="digit" value="{{remainingDistance}}" bindinput="onDistance" placeholder="如 18.6" />
+  <view class="meta" style="margin-top:8rpx">该数据来自截图/手动填写，发布后仅展示为参考值</view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">愿意等待</view>
+  <view style="display:flex;gap:16rpx">
+    <view wx:for="{{waitings}}" wx:key="*this"
+          class="wait-chip {{waitingIndex === index ? 'wait-chip-on' : ''}}"
+          data-index="{{index}}" bindtap="onWaiting">{{item}} 分钟</view>
+  </view>
+  <view class="meta" style="margin-top:8rpx">都不选则展示"等待时间不确定"</view>
+
+  <view class="meta" style="margin:24rpx 0 12rpx">可拼座位数</view>
+  <view class="stepper">
+    <view class="step-btn" bindtap="decSeats">−</view>
+    <view class="step-num">{{seats}}</view>
+    <view class="step-btn" bindtap="incSeats">＋</view>
+  </view>
+</view>
+
+<view style="padding:20rpx 24rpx 40rpx">
+  <view class="btn-primary {{submitting ? 'disabled' : ''}}" bindtap="onSubmit">
+    {{submitting ? '发布中…' : '确认并发布'}}
+  </view>
+</view>

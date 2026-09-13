@@ -1,0 +1,28 @@
+<view wx:if="{{loading}}" class="state-block">加载中…</view>
+
+<view wx:elif="{{loadFailed}}" class="state-block">
+  <view>加载失败</view>
+  <view class="retry" bindtap="retry">点击重试</view>
+</view>
+
+<view wx:elif="{{cards.length === 0}}" class="state-block">
+  <view>还没有人发布预打车</view>
+  <view class="meta">点右下角发布第一条</view>
+</view>
+
+<block wx:else>
+  <view class="card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
+    <view class="route-line">{{item.route}}</view>
+    <view class="meta" style="margin-top:8rpx">今天 {{item.depart}} 出发</view>
+    <view class="meta">已有 {{item.joined}} 人 · 还可加入 {{item.seats}} 人</view>
+    <view class="meta" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
+    <view style="margin-top:16rpx"><text class="tag">{{item.statusLabel}}</text></view>
+    <view style="margin-top:20rpx" wx:if="{{item.joinable}}">
+      <view class="btn-primary" data-id="{{item.id}}" catchtap="contactOwner">联系发布者</view>
+    </view>
+  </view>
+</block>
+
+<view style="padding:20rpx 24rpx 40rpx">
+  <view class="btn-primary" bindtap="goPublish">发布预打车</view>
+</view>

@@ -1,0 +1,35 @@
+{
+  "pages": [
+    "pages/booked/index",
+    "pages/prebook/index",
+    "pages/messages/index",
+    "pages/profile/index",
+    "pages/publish/index",
+    "pages/import/index",
+    "pages/ride-detail/index",
+    "pages/chat/index",
+    "pages/place-picker/index",
+    "pages/feedback/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "拼好车",
+    "backgroundColor": "#f3f4f6",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#9ca3af",
+    "selectedColor": "#576b95",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/booked/index", "text": "已打上" },
+      { "pagePath": "pages/prebook/index", "text": "预打车" },
+      { "pagePath": "pages/messages/index", "text": "消息" },
+      { "pagePath": "pages/profile/index", "text": "我的" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

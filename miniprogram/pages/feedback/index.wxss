@@ -1,0 +1,10 @@
+/* 反馈页 */
+.feedback-input {
+  width: 100%;
+  min-height: 240rpx;
+  background: #f9fafb;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  box-sizing: border-box;
+  font-size: 30rpx;
+}

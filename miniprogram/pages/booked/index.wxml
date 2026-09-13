@@ -1,0 +1,32 @@
+<view wx:if="{{loading}}" class="state-block">加载中…</view>
+
+<view wx:elif="{{loadFailed}}" class="state-block">
+  <view>加载失败</view>
+  <view class="retry" bindtap="retry">点击重试</view>
+</view>
+
+<view wx:elif="{{cards.length === 0}}" class="state-block">
+  <view>现在没有人已打上车</view>
+  <view class="meta">你打过车后可以发布出来等同行者</view>
+</view>
+
+<block wx:else>
+  <view class="card" wx:for="{{cards}}" wx:key="id">
+    <view class="route-line">{{item.route}}</view>
+    <view class="meta" style="margin-top:8rpx">
+      还有 <text class="meta-strong">{{item.seats}}</text> 个位置 · {{item.waiting}}
+    </view>
+    <view class="meta" wx:if="{{item.plate}}">车牌 {{item.plate}}</view>
+    <view class="meta" wx:if="{{item.distance}}">{{item.distance}}</view>
+    <view style="margin-top:20rpx" wx:if="{{item.seats > 0}}">
+      <view class="btn-primary" data-id="{{item.id}}" bindtap="contactOwner">立即联系车主</view>
+    </view>
+    <view style="margin-top:20rpx" wx:else>
+      <view class="btn-primary disabled">位置已满</view>
+    </view>
+  </view>
+</block>
+
+<view style="padding:20rpx 24rpx 40rpx">
+  <view class="btn-plain" bindtap="goImport">我已打上车，发布行程</view>
+</view>

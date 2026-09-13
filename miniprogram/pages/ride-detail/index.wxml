@@ -1,0 +1,43 @@
+<view wx:if="{{loading}}" class="state-block">加载中…</view>
+
+<view wx:elif="{{loadFailed}}" class="state-block">
+  <view>加载失败</view>
+  <view class="retry" bindtap="retry">点击重试</view>
+</view>
+
+<block wx:elif="{{ride}}">
+  <view class="card">
+    <view style="margin-bottom:12rpx"><text class="tag">{{statusLabel}}</text></view>
+    <view class="route-line">{{route}}</view>
+    <view class="meta" style="margin-top:8rpx">{{depart}} 出发</view>
+    <view class="meta">已有 {{ride.memberCount}} 人 / 满 {{ride.capacity}} 人 · 剩余 {{seats}} 位</view>
+    <view class="meta" wx:if="{{ride.plateNumber}}">车牌 {{ride.plateNumber}}（{{ride.provider}}）</view>
+    <view class="meta" wx:if="{{distance}}">{{distance}}</view>
+    <view class="meta" wx:if="{{ride.status === 'BOOKED'}}">{{waiting}}</view>
+    <view class="meta" wx:if="{{ride.remark}}">备注：{{ride.remark}}</view>
+  </view>
+
+  <!-- 非 owner 且可加入：Primary Action = 加入 -->
+  <view wx:if="{{joinable}}" style="padding:20rpx 24rpx 40rpx">
+    <view class="btn-primary {{joining ? 'disabled' : ''}}" bindtap="onJoin">
+      {{joining ? '加入中…' : '加入拼车'}}
+    </view>
+    <view class="btn-plain" style="margin-top:20rpx" bindtap="contactOwner">联系发布者</view>
+  </view>
+
+  <!-- owner 且 BOOKED：Primary Action = 不再等人 -->
+  <view wx:elif="{{isMine && ride.status === 'BOOKED'}}" style="padding:20rpx 24rpx 40rpx">
+    <view class="btn-primary" bindtap="onStopWaiting">不再等人，开始行程</view>
+  </view>
+
+  <!-- owner 后续推进 -->
+  <view wx:elif="{{isMine && ride.status === 'IN_PROGRESS'}}" style="padding:20rpx 24rpx 40rpx">
+    <view class="meta" style="margin-bottom:16rpx">行程进行中，到达后请完成行程</view>
+    <view class="btn-primary" bindtap="onArrive">已到达目的地</view>
+  </view>
+
+  <view wx:elif="{{!joinable && !isMine}}" style="padding:20rpx 24rpx 40rpx">
+    <view class="state-block">当前状态不可加入</view>
+    <view class="btn-plain" bindtap="contactOwner">联系发布者</view>
+  </view>
+</block>

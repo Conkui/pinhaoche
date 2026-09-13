@@ -1,0 +1,8 @@
+<view class="card">
+  <view class="meta" style="margin-bottom:12rpx">遇到问题或有建议？告诉我们（最多 500 字）</view>
+  <textarea class="feedback-input" value="{{content}}" bindinput="onInput" maxlength="500"
+            placeholder="如：地点列表想增加 XX、消息提醒收不到…" />
+  <view class="btn-primary {{submitting || !content ? 'disabled' : ''}}" style="margin-top:24rpx" bindtap="onSubmit">
+    {{submitting ? '提交中…' : '提交反馈'}}
+  </view>
+</view>
