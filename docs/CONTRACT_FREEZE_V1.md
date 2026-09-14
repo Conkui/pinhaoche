@@ -21,6 +21,11 @@
 | RFC | 内容 | 影响 |
 | --- | --- | --- |
 | [RFC-006](rfc/RFC-006-feedback.md) | 新增 `POST /feedback` 意见反馈；新增 Flyway `V2__feedback.sql` | openapi 未动（新增端点）、DB V2 迁移 |
+| [RFC-007](rfc/RFC-007-ui-upgrade.md) | UI 视觉升级（Ant Design 令牌体系） | 仅小程序样式（wxml/wxss/页面 ts） |
+| [RFC-008](rfc/RFC-008-my-rides.md) | 新增 `GET /rides/mine` 我的发布（含终态） | openapi.yaml |
+| [RFC-009](rfc/RFC-009-admin-console.md) | 管理端 Web 后台（统计总览/反馈/拼车/地点） | 仅后端内部（`/api/v1/admin/**` + X-Admin-Key） |
+| [RFC-010](rfc/RFC-010-rate-limit-and-sanitize.md) | 接口限流（登录按 IP、用户级）+ 文本净化 | 新增 `RATE_LIMITED` 错误码；部署硬约束（Nginx 覆盖式 XFF） |
+| [RFC-011](rfc/RFC-011-user-profile.md) | 新增 `PUT /users/me`（头像昵称填写能力）+ `/files/**` 头像只读静态资源 | openapi.yaml 新增路径与 schema（不改既有字段语义）；DB 无迁移；新增配置 `app.upload-dir` |
 
 数据库结构冻结不变（V1__init.sql 无改动）。冻结后任何修改必须新建 RFC，由 Integration 负责人决定是否接受。
 

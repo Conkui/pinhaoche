@@ -11,5 +11,12 @@ docs/ui-preview/preview-*.png
 .DS_Store
 docs/ui-preview/admin-*.png
 
+# 本地环境变量：含真实 WECHAT_SECRET / ADMIN_KEY，绝不能进版本库（模板见 .env.example）
+.env
+
+# 后端落盘的运行时数据（用户上传的头像，RFC-011；容器绑定挂载点）
+# 锚定根目录：写 data/ 会连 server/src/main/resources/data/ 之类的子目录一起忽略掉
+/data/
+
 # 微信开发者工具的个人本地配置（含各人 urlCheck/调试选项），按官方建议不入版本库
 miniprogram/project.private.config.json

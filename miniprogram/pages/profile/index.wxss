@@ -1,25 +1,55 @@
-/* 我的页：入口行（我的发布 / 意见反馈） */
-.profile-row {
+/* 我的页：资料编辑（头像/昵称）+ 入口行（我的发布 / 意见反馈） */
+
+/* ---------- 资料头部 ---------- */
+
+.profile-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 8rpx 0;
-  font-size: 32rpx;
 }
 
-/* 多行入口之间的浅灰分隔线 */
-.profile-row-divider {
-  border-top: 1rpx solid #f3f4f6;
-  margin-top: 16rpx;
-  padding-top: 24rpx;
+.profile-head-main {
+  margin-left: 24rpx;
+  /* 昵称最长 20 字符，允许换行但不要挤压头像 */
+  flex: 1;
+  min-width: 0;
 }
 
-/* 头像：用户已设置 avatar 时才渲染真实图片（占位底色便于加载中区分） */
+.profile-name {
+  font-weight: 600;
+  font-size: 34rpx;
+}
+
+.profile-hint {
+  margin-top: 4rpx;
+}
+
+/* 头像按钮：必须重置微信 button 默认样式。
+   不重置会出现默认灰底 + 右侧边框（button::after 画的 1rpx 边框）与内边距，
+   在小圆头像上表现为一个难看的方块套圆圈，且按钮宽度会撑满整行。 */
+.avatar-btn {
+  width: 96rpx;
+  height: 96rpx;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  line-height: normal;
+  border-radius: 48rpx;
+  overflow: hidden;
+}
+
+/* 微信 button 的默认边框来自 ::after 伪元素，必须单独清掉（border:none 不影响它） */
+.avatar-btn::after {
+  border: none;
+}
+
+/* 头像：用户已设置 avatar（含刚选的临时图）时才渲染真实图片（占位底色便于加载中区分） */
 .avatar-img {
   width: 96rpx;
   height: 96rpx;
   border-radius: 48rpx;
   background: #f3f4f6;
+  display: block;
 }
 
 /* 头像兜底：昵称首字符放在主色渐变色块里（无图片资源依赖，修复 avatar-default.png 404） */
@@ -33,4 +63,52 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---------- 昵称输入 ---------- */
+
+.profile-field {
+  display: flex;
+  align-items: center;
+  margin-top: 32rpx;
+}
+
+.profile-field-label {
+  width: 96rpx;
+  color: #6b7280;
+  font-size: 28rpx;
+}
+
+/* 输入框用浅灰底与白卡片区分可编辑区域；圆角与卡片同族（12/16/20rpx） */
+.profile-input {
+  flex: 1;
+  min-width: 0;
+  height: 80rpx;
+  padding: 0 24rpx;
+  background: #f5f7fa;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  color: #1f2937;
+}
+
+/* 保存按钮与输入区拉开间距，突出它是本页唯一主操作 */
+.profile-save {
+  margin-top: 32rpx;
+}
+
+/* ---------- 入口行 ---------- */
+
+.profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8rpx 0;
+  font-size: 32rpx;
+}
+
+/* 多行入口之间的浅灰分隔线 */
+.profile-row-divider {
+  border-top: 1rpx solid #f3f4f6;
+  margin-top: 16rpx;
+  padding-top: 24rpx;
 }

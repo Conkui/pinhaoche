@@ -1,15 +1,42 @@
 <view wx:if="{{user}}" class="card">
-  <view style="display:flex;align-items:center">
-    <!-- 头像：仅有值（user.avatar）时才渲染 image 标签；否则用昵称首字符渐变色块兜底。
-         为什么：原实现回退引用本地 /images/avatar-default.png，但该资源不存在，
-         渲染层每次加载都 404 报错刷屏。首字符色块无任何资源依赖，彻底消除 404。 -->
-    <image wx:if="{{user.avatar}}" src="{{user.avatar}}" class="avatar-img" />
-    <view wx:else class="avatar-fallback">{{user.nickname[0]}}</view>
-    <view style="margin-left:24rpx">
-      <view style="font-weight:600;font-size:34rpx">{{user.nickname}}</view>
+  <view class="profile-head">
+    <!-- 头像：必须用 open-type="chooseAvatar"（微信唯一合规路径，详见 index.ts 顶部注释）。
+         按钮里夹 image：未设置头像时用昵称首字符色块兜底——
+         绝不回引本地图片资源（历史上 avatar-default.png 不存在导致 404 刷屏）。 -->
+    <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+      <image
+        wx:if="{{avatarTempPath || avatarUrl}}"
+        src="{{avatarTempPath || avatarUrl}}"
+        class="avatar-img"
+        mode="aspectFill"
+        binderror="onAvatarError"
+      />
+      <view wx:else class="avatar-fallback">{{avatarInitial}}</view>
+    </button>
+    <view class="profile-head-main">
+      <view class="profile-name">{{user.nickname}}</view>
       <view class="meta">ID {{user.id}}</view>
+      <view class="meta profile-hint">点击头像选择微信头像</view>
     </view>
   </view>
+
+  <view class="profile-field">
+    <view class="profile-field-label">昵称</view>
+    <!-- type="nickname"：真机上聚焦输入框时可由微信一键填入微信昵称（开发者工具模拟器不保证）。
+         不回显旧昵称（旧值是占位"同学XXXX"，回显后还要先删干净），当前昵称见卡片头部。 -->
+    <input
+      class="profile-input"
+      type="nickname"
+      value="{{nicknameDraft}}"
+      placeholder="点此填入微信昵称或手动输入"
+      maxlength="20"
+      bindinput="onNicknameInput"
+    />
+  </view>
+  <view class="meta">当前昵称：{{user.nickname}} · 点击昵称输入框可填入微信昵称（真机自动填充，工具内需手填）</view>
+
+  <!-- 本页唯一 Primary Action -->
+  <view class="btn-primary profile-save {{canSave ? '' : 'disabled'}}" bindtap="onSubmit">{{saving ? '保存中…' : '保存资料'}}</view>
 </view>
 
 <view wx:else class="state-block">登录中…</view>

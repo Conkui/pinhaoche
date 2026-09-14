@@ -13,7 +13,7 @@
 | 实时拼 `pages/booked`（Tab 文案"实时拼"，标题"实时拼车"） | 立即联系车主 | ① `GET /api/v1/rides?view=BOOKED`<br>② `POST /api/v1/chat-sessions`<br>③ WebSocket `/ws/v1/chat` | ② `{rideId, peerUserId=ownerId}` | ② `ChatSession` → 跳聊天页 | 卡片视觉顺序：路线/联系/余位/车牌/距离；满员按钮置灰 |
 | 找拼友 `pages/prebook`（Tab 文案"找拼友"） | 发布预打车（悬浮固定底部） | ① `GET /api/v1/rides?view=PREBOOK`<br>② `POST /api/v1/chat-sessions` | 同上 | 同上 | 整卡点击进详情；不可加入的卡片不渲染；卡片内"联系发布者"为次级按钮 |
 | 消息 `pages/messages` | 打开会话 | `GET /api/v1/chat-sessions`（RFC-001） | - | `ChatSessionSummary[]`（含 unreadCount） | 未读角标取 unreadCount |
-| 我的 `pages/profile` | 重新登录 | `wx.login` + `POST /api/v1/auth/login`（RFC-002） | `{code}` | `LoginResponse {token, user}` | token 存 storage，全局 Bearer |
+| 我的 `pages/profile` | 保存资料 | ① `wx.login` + `POST /api/v1/auth/login`（RFC-002）<br>② `PUT /api/v1/users/me`（RFC-011）<br>③ 头像图片 `<image src=SERVER_ORIGIN + avatar>` → `GET /files/**` | ① `{code}`<br>② `{nickname?, avatarBase64?}`（两者至少一个非空；**本接口是幂等替换，不要求 `Idempotency-Key`**） | ① `LoginResponse {token, user}`<br>② `UserProfile {id, nickname, avatar}` | 头像昵称走"头像昵称填写能力"（`open-type="chooseAvatar"` + `input type="nickname"`），**禁用 `wx.getUserProfile`**（改版后返回匿名数据）；`avatar` 是相对路径，`/files/**` 免 token（`<image>` 无法带 Authorization） |
 | 发布预打车 `pages/publish` | 发布 | `POST /api/v1/rides` | `CreateRideRequest` + `Idempotency-Key` | 201 `Ride` | 提交按钮持有幂等键，失败重试复用 |
 | 发布已打上 `pages/import` | 确认并发布 | `POST /api/v1/rides/import`（RFC-004） | `ImportRideRequest` + `Idempotency-Key` | 201 `Ride`（status=BOOKED） | 车牌/地点/距离均用户确认；距离标注"截图参考值"（规范 §19） |
 | 地点选择 `pages/place-picker` | 选用地点 | `GET /api/v1/places` | - | `Place[]` | 预设列表 + 底部自定义填写（CUSTOM 不入公共库） |
@@ -58,8 +58,10 @@
 4. 视觉规范红线（UI_SPEC）：白卡片、浅灰底、系统蓝主色、每页一个 Primary Action、禁渐变/霓虹/复杂阴影。
 5. 所有列表页必须实现：加载中 / 空态 / 失败重试 / 已满·过期状态（模板见各页面 wxml 顶部三态块）。
 
-## 环境地址（miniprogram/config/index.ts）
+## 环境地址（`miniprogram/config.ts`，必须保持单文件）
 
+- `MODE: 'mock' | 'real'` 是**唯一的模式开关**，`SERVER_ORIGIN`/`BASE_URL`/`WS_URL`/`DEV_MOCK_LOGIN` 全部由它派生；
+  `'mock'` 配合后端 `WECHAT_MOCK=true`（固定 dev code，身份稳定），`'real'` 走 `wx.login` 真实 code（后端须 `WECHAT_MOCK=false` + 真实 AppSecret）。
 - 本地联调：`http://127.0.0.1:8080/api/v1`（docker-compose 起的后端，微信开发者工具需勾选"不校验合法域名"）
 - WebSocket：`ws://127.0.0.1:8080/ws/v1/chat?token=`
-- 上线：替换为 HTTPS/wss 域名并在小程序后台配置 request/socket 合法域名。
+- 上线：改 `SERVER_ORIGIN` 为 HTTPS 域名并在小程序后台配置 request/socket 合法域名。

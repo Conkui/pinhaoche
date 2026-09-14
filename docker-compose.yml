@@ -33,6 +33,11 @@ services:
 
   server:
     build: ./server
+    # 环境变量全部由项目根目录的 .env 驱动（compose 会自动读取同名 .env，无需 --env-file）。
+    # 真实微信模式只需改 .env 里的 WECHAT_MOCK/WECHAT_APPID/WECHAT_SECRET，然后重建 server 容器：
+    #   docker compose up -d --build server
+    # 为什么不再硬编码 "true"：硬编码会让"切真实模式"变成改源码，违反"配置与代码分离"，
+    # 且容易在容器重建后悄悄回退成 mock（登录拿不到真实 openid）。
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
@@ -41,9 +46,20 @@ services:
       DB_PASSWORD: pinhaoche
       REDIS_HOST: redis
       RABBITMQ_HOST: rabbitmq
-      WECHAT_MOCK: "true"
+      # 语法 "${VAR:-默认值}"：未定义 .env 或该行被注释时回落到默认值 = 本地 mock 联调，
+      # 保证"全新机器 clone 下来直接 up 就能跑"，不要求先建 .env。
+      WECHAT_MOCK: "${WECHAT_MOCK:-true}"
+      WECHAT_APPID: "${WECHAT_APPID:-}"
+      WECHAT_SECRET: "${WECHAT_SECRET:-}"
+      ADMIN_KEY: "${ADMIN_KEY:-dev-admin-key}"
+      # 头像上传落盘目录（RFC-011），需与下面 volumes 的挂载点一致
+      UPLOAD_DIR: "${UPLOAD_DIR:-./data/uploads}"
     ports:
       - "8080:8080"
+    volumes:
+      # 上传的头像持久化：不挂卷的话文件写在容器可写层，`up --build` 重建容器即全部丢失，
+      # 表现为"我的"页头像全 404（库里只剩失效路径）。绑定挂载到宿主机 ./data/uploads 便于直接查看文件。
+      - ./data/uploads:/app/data/uploads
     depends_on:
       mysql:
         condition: service_healthy

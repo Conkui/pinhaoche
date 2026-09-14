@@ -40,6 +40,9 @@ app:
     appid: ${WECHAT_APPID:}
     secret: ${WECHAT_SECRET:}
   token-ttl-hours: ${TOKEN_TTL_HOURS:72}
+  # 头像上传目录（RFC-011）：同时用于 PUT /users/me 落盘与 GET /files/** 静态资源映射，
+  # 容器部署必须挂卷（否则重建容器即丢头像），默认值面向本地与 compose 的 ./data/uploads。
+  upload-dir: ${UPLOAD_DIR:./data/uploads}
   # 管理端接口的共享密钥（RFC-005），生产必须更换。
   admin-key: ${ADMIN_KEY:dev-admin-key}
   outbox:

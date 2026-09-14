@@ -36,6 +36,23 @@ public class AppUser {
         this.updatedAt = now;
     }
 
+    /**
+     * 资料更新（RFC-011）：只覆盖非 null 的字段，缺省即保持原值，并刷新 updated_at。
+     *
+     * 为什么把"只改非空字段"的不变量放在实体里：这是资料更新的唯一语义定义处，
+     * 散在 service 里容易被后续调用方漏掉（例如只改头像却忘记刷 updatedAt），
+     * 而调用方传 null 表示"本次不改这一项"，与"清空"无法区分——V1 不支持清空头像/昵称。
+     */
+    public void applyProfileUpdate(String nickname, String avatar, OffsetDateTime now) {
+        if (nickname != null) {
+            this.nickname = nickname;
+        }
+        if (avatar != null) {
+            this.avatar = avatar;
+        }
+        this.updatedAt = now;
+    }
+
     public Long getId() { return id; }
     public String getOpenid() { return openid; }
     public String getNickname() { return nickname; }

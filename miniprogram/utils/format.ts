@@ -33,6 +33,30 @@ export function waitingText(minutes: number | null | undefined): string {
   return `愿意等待 ${minutes} 分钟`
 }
 
+/**
+ * 相对路径 → 可加载的绝对 URL（纯函数，无副作用，便于单测）。
+ *
+ * 用途：后端 `app_user.avatar` 存的是相对路径（RFC-011：如 `/files/xxx.jpg`），
+ * 而小程序 `<image src>` 只能加载绝对地址，必须拼上服务端 origin（config.SERVER_ORIGIN）。
+ * 把 origin 作为参数传入而不是在本函数里 import config，是为了让本函数保持纯函数
+ * （同一入参恒定同输出），测试与复用都不依赖运行环境。
+ *
+ * 已是绝对地址时原样返回：http(s) 是服务端/cdn 地址，wxfile:// 是本机临时文件
+ * （chooseAvatar 选择后、上传前的预览路径），data: 是内联图片；这三种都不该被拼接。
+ * 重复调用结果一致（幂等），页面重渲染时反复调用安全。
+ */
+export function absoluteUrl(path: string | null | undefined, origin: string): string {
+  if (!path) {
+    return ''
+  }
+  if (/^(https?:\/\/|wxfile:\/\/|data:)/.test(path)) {
+    return path
+  }
+  // origin 尾部 '/' 由调用方传参决定，这里统一剥掉，避免出现 `http://host//files/x.jpg`
+  const base = origin.endsWith('/') ? origin.slice(0, -1) : origin
+  return `${base}/${path.replace(/^\/+/, '')}`
+}
+
 /** 状态 → 列表页可读标签。 */
 export const STATUS_LABELS: Record<string, string> = {
   DRAFT: '草稿',
