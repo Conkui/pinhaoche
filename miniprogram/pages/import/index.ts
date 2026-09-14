@@ -7,6 +7,7 @@ import { importRide, ImportRideRequest, PlaceRef } from '../../services/ride'
 import { listPlaces, Place } from '../../services/place'
 import { uuid } from '../../services/request'
 import { parseShareText } from '../../utils/shareText'
+import { getRealtimeCarpoolAvailability } from '../../services/feature'
 
 const PROVIDERS: Array<{ value: ImportRideRequest['provider']; label: string }> = [
   { value: 'DIDI', label: '滴滴' },
@@ -203,6 +204,20 @@ Page({
   },
 
   onSubmit() {
+    // 不能只依赖上一页入口判断：用户可能在已打开的导入页停留期间被运营临时停用。
+    getRealtimeCarpoolAvailability()
+      .then((feature) => {
+        if (!feature.enabled) {
+          wx.showModal({ title: '实时拼暂不可用', content: feature.announcement, showCancel: false })
+          return
+        }
+        this.submitWhenFeatureEnabled()
+      })
+      .catch((err: Error) => wx.showToast({ title: err.message || '暂无法检查功能状态', icon: 'none' }))
+  },
+
+  /** 通过最新开关判断后才走既有表单校验和幂等提交。 */
+  submitWhenFeatureEnabled() {
     const d = this.data
     if (!d.plateNumber.trim()) {
       wx.showToast({ title: '请填写车牌号', icon: 'none' })

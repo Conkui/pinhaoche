@@ -2,6 +2,7 @@
 import * as rideApi from '../../services/ride'
 import { Ride } from '../../services/ride'
 import { formatDistance, remainingSeats, waitingText } from '../../utils/format'
+import { getRealtimeCarpoolAvailability } from '../../services/feature'
 
 interface BookedCard {
   id: number
@@ -82,6 +83,15 @@ Page({
   },
 
   goImport() {
-    wx.navigateTo({ url: '/pages/import/index' })
+    // 入口每次实时读取运营开关：缓存页面不能绕过后台刚刚发布的停用公告。
+    getRealtimeCarpoolAvailability()
+      .then((feature) => {
+        if (!feature.enabled) {
+          wx.showModal({ title: '实时拼暂不可用', content: feature.announcement, showCancel: false })
+          return
+        }
+        wx.navigateTo({ url: '/pages/import/index' })
+      })
+      .catch((err: Error) => wx.showToast({ title: err.message || '暂无法检查功能状态', icon: 'none' }))
   },
 })

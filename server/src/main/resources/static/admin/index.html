@@ -259,7 +259,7 @@
           <thead>
             <tr>
               <th>ID</th><th>路线</th><th>车主ID</th><th>状态</th>
-              <th>人数</th><th>车牌</th><th>出发时间</th>
+              <th>人数</th><th>车牌</th><th>出发时间</th><th>操作</th>
             </tr>
           </thead>
           <tbody id="ridesBody"></tbody>
@@ -694,7 +694,7 @@
       .catch(function (e) {
         showError('rides', e.message);
         document.getElementById('ridesBody').innerHTML =
-          '<tr><td colspan="7" class="empty">加载失败</td></tr>';
+          '<tr><td colspan="8" class="empty">加载失败</td></tr>';
         document.getElementById('ridesPager').innerHTML = '';
       })
       .finally(function () { card.classList.remove('loading'); });
@@ -708,7 +708,7 @@
   function renderRides(items) {
     var body = document.getElementById('ridesBody');
     if (!items || items.length === 0) {
-      body.innerHTML = '<tr><td colspan="7" class="empty">暂无拼车单</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="empty">暂无拼车单</td></tr>';
       return;
     }
     var html = '';
@@ -724,9 +724,27 @@
         '<td class="num">' + escapeHtml(formatCapacity(r.memberCount, r.capacity)) + '</td>' +
         '<td>' + (r.plateNumber ? escapeHtml(r.plateNumber) : '<span class="muted">-</span>') + '</td>' +
         '<td class="muted">' + escapeHtml(formatDateTime(r.departTime)) + '</td>' +
+        '<td><button class="btn btn-sm btn-danger" data-ride-delete="' + escapeHtml(String(r.id)) + '">删除</button></td>' +
         '</tr>';
     }
     body.innerHTML = html;
+    var deleteButtons = body.querySelectorAll('[data-ride-delete]');
+    for (var j = 0; j < deleteButtons.length; j++) {
+      deleteButtons[j].addEventListener('click', function () {
+        deleteRide(Number(this.getAttribute('data-ride-delete')));
+      });
+    }
+  }
+
+  function deleteRide(rideId) {
+    if (!Number.isFinite(rideId) || rideId <= 0) return;
+    if (!window.confirm('确认删除该拼车单？删除指令会被审计且不可撤销。')) return;
+    api('/api/v1/admin/rides/' + encodeURIComponent(String(rideId)), { method: 'DELETE' })
+      .then(function () {
+        showToast('已提交删除', 'success');
+        loadRides();
+      })
+      .catch(function (e) { showError('rides', e.message); });
   }
 
   /* ============================================================
