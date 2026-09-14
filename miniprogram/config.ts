@@ -15,7 +15,7 @@
  * 只改地址忘了关 dev code，会拿 dev code 去请求真实后端（登录 401）；只关 dev code 忘了改地址，
  * 会拿真实 code 打本地 mock 后端（同样是 401）。派生写法让这类"半切换"在结构上不可能出现。
  */
-export const MODE: 'mock' | 'real' = 'mock'
+export const MODE: 'mock' | 'real' = 'real'
 
 /**
  * 服务端 origin（不含 /api/v1 路径）。两个用途：
@@ -39,4 +39,5 @@ export const WS_URL = `${SERVER_ORIGIN.replace(/^http/, 'ws')}/ws/v1/chat`
 // 每次重登都会 upsert 出全新用户（身份漂移，"我的发布"看不到旧单）。
 // 开启后 auth.ts 改用 storage 持久化的固定 dev code，openid 稳定 = 同一个用户。
 // MODE='real' 时为 false：走真实微信 openid（天然稳定），不受此开关影响。
-export const DEV_MOCK_LOGIN = MODE === 'mock'
+const isMockMode = (mode: 'mock' | 'real'): boolean => mode === 'mock'
+export const DEV_MOCK_LOGIN = isMockMode(MODE)
