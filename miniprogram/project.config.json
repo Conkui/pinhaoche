@@ -4,9 +4,33 @@
     "es6": true,
     "postcss": true,
     "minified": true,
-    "useCompilerPlugins": ["typescript"]
+    "useCompilerPlugins": [
+      "typescript"
+    ],
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "enhance": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "condition": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
   },
-  "appid": "touristappid",
+  "appid": "wxe956226c7e7fa726",
   "projectname": "pinhaoche-miniprogram",
-  "libVersion": "3.4.10"
+  "libVersion": "3.4.10",
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "editorSetting": {}
 }
