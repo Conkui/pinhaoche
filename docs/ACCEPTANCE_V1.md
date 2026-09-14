@@ -59,6 +59,7 @@
 | --- | --- | --- | --- | --- |
 | 2026-09-13 | PASS（7/7 单测，BUILD SUCCESS） | PASS（0 error） | B1-B17 全部 PASS（B9/B17 用 node ws 客户端模拟；B15 过期单 60s 内落 EXPIRED） | 通过 |
 | 2026-09-14（impl.4） | PASS（12/12 单测，含 RateLimitWindowTest） | PASS | B1-B17 回归 PASS；B18-B21 新增项 PASS（admin 403/200、ISO 时间、限流恰 20 次/分钟后 429、后台四 Tab 实测截图） | 通过 |
+| 2026-09-14（Review 修复后回归） | PASS（12/12） | PASS | B1-B17 全 PASS（12 PASS / 0 FAIL）；限流 25 连发=20×200+5×429 复验；反馈净化链路：纯控制字符被 @NotBlank(trim 语义) 拦截为 400 VALIDATION_ERROR（净化兜底为纵深防御），正常内容 204 | 通过（独立 Review APPROVE_WITH_FIXES：P1-1 部署约束已写入 RFC-010，P2-3 已修复，P2-1/2/4/5/6 记录于 PROJECT_STATUS 遗留项） |
 
 ### 执行中发现并修复的缺陷（验收流程价值记录）
 

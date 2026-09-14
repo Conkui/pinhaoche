@@ -41,6 +41,11 @@ public class FeedbackController {
         // 顺带补上 @Valid：原 @NotBlank/@Size 因缺注解从未生效（null content 会 NPE），
         // 生效后由 GlobalExceptionHandler 统一返回 400 VALIDATION_ERROR。
         String content = TextSanitizer.clean(request.content());
+        // Review P2-3：净化可能剥掉全部字符（如纯控制字符灌水），与聊天侧对齐做净化后空串兜底，
+        // 避免 NOT NULL 列里存进"语义为空"的脏数据在管理端展示成空行。
+        if (content == null || content.isBlank()) {
+            throw ApiException.validation("反馈内容不能为空");
+        }
         feedbackRepository.save(new Feedback((Long) v, content,
                 java.time.OffsetDateTime.now()));
         return org.springframework.http.ResponseEntity.noContent().build();
