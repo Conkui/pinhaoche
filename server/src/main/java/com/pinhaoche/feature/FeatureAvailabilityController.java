@@ -19,4 +19,9 @@ public class FeatureAvailabilityController {
     public FeatureAvailabilityService.RealtimeCarpoolAvailability realtimeCarpool() {
         return featureAvailabilityService.readRealtimeCarpool();
     }
+
+    @GetMapping("/find-friends")
+    public FeatureAvailabilityService.RealtimeCarpoolAvailability findFriends() {
+        return featureAvailabilityService.readFindFriends();
+    }
 }

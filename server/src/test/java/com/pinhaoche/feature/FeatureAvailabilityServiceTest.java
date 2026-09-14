@@ -20,9 +20,10 @@ class FeatureAvailabilityServiceTest {
     @Test
     void disabledSettingBlocksRealtimeWritesWithAnnouncement() {
         RealtimeCarpoolSettingRepository repository = mock(RealtimeCarpoolSettingRepository.class);
+        FindFriendsSettingRepository findFriendsRepository = mock(FindFriendsSettingRepository.class);
         when(repository.findById((byte) 1)).thenReturn(Optional.of(
                 new RealtimeCarpoolSetting(false, "系统维护，请稍后再试", OffsetDateTime.now(ZoneOffset.UTC))));
-        FeatureAvailabilityService service = new FeatureAvailabilityService(repository);
+        FeatureAvailabilityService service = new FeatureAvailabilityService(repository, findFriendsRepository);
 
         ApiException error = assertThrows(ApiException.class, service::requireRealtimeCarpoolEnabled);
 
@@ -33,9 +34,10 @@ class FeatureAvailabilityServiceTest {
     @Test
     void disabledSettingRequiresAnnouncement() {
         RealtimeCarpoolSettingRepository repository = mock(RealtimeCarpoolSettingRepository.class);
+        FindFriendsSettingRepository findFriendsRepository = mock(FindFriendsSettingRepository.class);
         when(repository.findById((byte) 1)).thenReturn(Optional.of(
                 new RealtimeCarpoolSetting(true, "旧公告", OffsetDateTime.now(ZoneOffset.UTC))));
-        FeatureAvailabilityService service = new FeatureAvailabilityService(repository);
+        FeatureAvailabilityService service = new FeatureAvailabilityService(repository, findFriendsRepository);
 
         ApiException error = assertThrows(ApiException.class,
                 () -> service.updateRealtimeCarpool(false, "  "));
@@ -46,10 +48,11 @@ class FeatureAvailabilityServiceTest {
     @Test
     void updateReturnsDisabledAvailabilityAndSanitizedAnnouncement() {
         RealtimeCarpoolSettingRepository repository = mock(RealtimeCarpoolSettingRepository.class);
+        FindFriendsSettingRepository findFriendsRepository = mock(FindFriendsSettingRepository.class);
         RealtimeCarpoolSetting setting = new RealtimeCarpoolSetting(true, "旧公告", OffsetDateTime.now(ZoneOffset.UTC));
         when(repository.findById((byte) 1)).thenReturn(Optional.of(setting));
         when(repository.save(any(RealtimeCarpoolSetting.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        FeatureAvailabilityService service = new FeatureAvailabilityService(repository);
+        FeatureAvailabilityService service = new FeatureAvailabilityService(repository, findFriendsRepository);
 
         var result = service.updateRealtimeCarpool(false, "\n 维护中\u0000 ");
 

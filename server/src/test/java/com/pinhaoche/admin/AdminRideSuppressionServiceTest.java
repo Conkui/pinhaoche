@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,5 +41,27 @@ class AdminRideSuppressionServiceTest {
         assertTrue(result.alreadySuppressed());
         org.junit.jupiter.api.Assertions.assertEquals(at, result.deletedAt());
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void bulkSuppressDeduplicatesIdsAndSeparatesNewFromExistingAudits() {
+        var repository = mock(AdminRideSuppressionRepository.class);
+        var at = OffsetDateTime.of(2026, 9, 14, 1, 2, 3, 0, ZoneOffset.UTC);
+        when(repository.findAllById(org.mockito.ArgumentMatchers.<Long>anyIterable()))
+                .thenReturn(List.of(new AdminRideSuppression(12L, at)));
+        var service = new AdminRideSuppressionService(repository);
+
+        var result = service.suppressAll(List.of(12L, 34L, 12L));
+
+        org.junit.jupiter.api.Assertions.assertEquals(2, result.requested());
+        org.junit.jupiter.api.Assertions.assertEquals(1, result.newlySuppressed());
+        org.junit.jupiter.api.Assertions.assertEquals(1, result.alreadySuppressed());
+        verify(repository).saveAll(org.mockito.ArgumentMatchers.argThat(items -> {
+            // CrudRepository 的批量参数契约是 Iterable，不能假定实现为 List。
+            var iterator = items.iterator();
+            return iterator.hasNext()
+                    && iterator.next().getRideId() == 34L
+                    && !iterator.hasNext();
+        }));
     }
 }
