@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pinhaoche.common.api.ApiException;
 import com.pinhaoche.common.api.ErrorCode;
 import com.pinhaoche.common.idempotency.IdempotencyService;
+import com.pinhaoche.admin.AdminRideSuppressionService;
 import com.pinhaoche.feature.FeatureAvailabilityService;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
@@ -33,12 +34,13 @@ public class RideService {
     private final ObjectMapper objectMapper;
     private final UserContactService userContactService;
     private final FeatureAvailabilityService featureAvailabilityService;
+    private final AdminRideSuppressionService suppressionService;
 
     public RideService(RideRepository rideRepository, RideMemberRepository memberRepository,
                        RideStateMachine stateMachine, PlaceService placeService,
                        IdempotencyService idempotency, OutboxEventRepository outboxRepository,
                        ObjectMapper objectMapper, UserContactService userContactService,
-                       FeatureAvailabilityService featureAvailabilityService) {
+                       FeatureAvailabilityService featureAvailabilityService, AdminRideSuppressionService suppressionService) {
         this.rideRepository = rideRepository;
         this.memberRepository = memberRepository;
         this.stateMachine = stateMachine;
@@ -48,6 +50,7 @@ public class RideService {
         this.objectMapper = objectMapper;
         this.userContactService = userContactService;
         this.featureAvailabilityService = featureAvailabilityService;
+        this.suppressionService = suppressionService;
     }
 
     // ---------- DTO（与 openapi.yaml schema 一一对应，字段增减属于契约变更） ----------
@@ -86,16 +89,19 @@ public class RideService {
                         // 用户红线：出发时间已过的单对所有人隐藏（过期任务会随后把状态落为 EXPIRED）
                         .findByStatusInAndDepartTimeAfterOrderByDepartTimeAsc(
                                 List.of(RideStatus.PUBLISHED, RideStatus.MATCHING), OffsetDateTime.now())
-                        .stream().map(RideService::toDto).toList();
+                        .stream().filter(r -> !suppressionService.isSuppressed(r.getId())).map(RideService::toDto).toList();
             }
             case "BOOKED" -> rideRepository.findByStatusOrderByUpdatedAtDesc(RideStatus.BOOKED)
-                    .stream().map(RideService::toDto).toList();
+                    .stream().filter(r -> !suppressionService.isSuppressed(r.getId())).map(RideService::toDto).toList();
             default -> throw ApiException.validation("view 必须为 PREBOOK 或 BOOKED");
         };
     }
 
     @Transactional(readOnly = true)
     public RideDto get(long rideId) {
+        if (suppressionService.isSuppressed(rideId)) {
+            throw ApiException.notFound("拼车记录不存在");
+        }
         return rideRepository.findById(rideId).map(RideService::toDto)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
     }
@@ -264,6 +270,8 @@ public class RideService {
     public RideDto createBooked(long ownerId, PlaceRef origin, PlaceRef destination, String provider,
                                 String plateNumber, BigDecimal remainingDistance,
                                 Integer waitingMinutes, int seats, String idempotencyKey) {
+        // “我已打上车”同属实时拼供给侧；不能只在小程序入口拦截，直接调用导入接口也必须失败。
+        featureAvailabilityService.requireRealtimeCarpoolEnabled();
         validateCapacity(1, seats + 1);
         PlaceRef o = resolveRef(origin);
         PlaceRef d = resolveRef(destination);

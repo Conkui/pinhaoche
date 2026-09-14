@@ -31,6 +31,31 @@ export interface Ride {
   memberContacts?: MemberContact[]
 }
 
+/**
+ * 找拼友页的路线筛选条件。空字符串表示该端不限制；出发地与目的地必须同时命中。
+ * 只读取 Ride 创建时固化的地点快照，绝不修改列表对象或回写公共地点。
+ */
+export interface RouteFilter {
+  readonly originText: string
+  readonly destinationText: string
+}
+
+const normalizeRouteText = (text: string): string => text.trim().toLocaleLowerCase()
+
+/**
+ * 在已取得的 PREBOOK 列表上执行纯本地筛选，避免为地点筛选引入未冻结的新接口。
+ * 自定义输入采用包含匹配，预设地点名称也自然得到精确匹配；两个条件为 AND。
+ */
+export const filterRidesByRoute = (rides: readonly Ride[], filter: RouteFilter): Ride[] => {
+  const origin = normalizeRouteText(filter.originText)
+  const destination = normalizeRouteText(filter.destinationText)
+  return rides.filter((ride) => {
+    const originMatches = !origin || normalizeRouteText(ride.origin.text).includes(origin)
+    const destinationMatches = !destination || normalizeRouteText(ride.destination.text).includes(destination)
+    return originMatches && destinationMatches
+  })
+}
+
 export interface MemberContact {
   userId: number
   nickname: string

@@ -7,6 +7,7 @@ import com.pinhaoche.common.idempotency.IdempotencyService;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
 import com.pinhaoche.feature.FeatureAvailabilityService;
+import com.pinhaoche.admin.AdminRideSuppressionService;
 import com.pinhaoche.place.PlaceService;
 import com.pinhaoche.user.UserContactService;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class RideServiceJoinEventTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final RideService service = new RideService(rides, members, new RideStateMachine(),
             mock(PlaceService.class), mock(IdempotencyService.class), outbox, mapper,
-            mock(UserContactService.class), mock(FeatureAvailabilityService.class));
+            mock(UserContactService.class), mock(FeatureAvailabilityService.class), mock(AdminRideSuppressionService.class));
 
     @Test
     void successfulJoinEmitsOneOwnerTargetedEventAfterMemberPersistence() throws Exception {

@@ -12,14 +12,48 @@
   <view class="retry" bindtap="retry">点击重试</view>
 </view>
 
-<view wx:elif="{{cards.length === 0}}" class="state-block">
-  <!-- 空态两种文案由 ts 侧计算：没人发布 / 有单但全部不可加入（被数据层过滤） -->
-  <view>{{emptyTitle}}</view>
-  <view class="meta">{{emptySub}}</view>
-</view>
-
 <block wx:else>
-  <view class="card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
+  <!-- 路线筛选始终位于服务列表顶部；预设下拉与“其他输入”均只作用于本地快照。 -->
+  <view class="route-filter-card">
+    <view class="route-filter-head">
+      <view class="route-filter-title">筛选路线</view>
+      <view class="route-filter-reset" bindtap="resetRouteFilter">重置</view>
+    </view>
+    <view class="route-filter-row">
+      <picker mode="selector" range="{{placeOptions}}" bindchange="onOriginPick" class="route-filter-picker">
+        <view class="route-filter-trigger">
+          <text class="route-filter-label">出发地</text>
+          <text class="route-filter-value {{originFilterText ? 'route-filter-set' : ''}}">{{originFilterText || '不限'}}</text>
+          <text class="picker-arrow">▾</text>
+        </view>
+      </picker>
+      <picker mode="selector" range="{{placeOptions}}" bindchange="onDestinationPick" class="route-filter-picker">
+        <view class="route-filter-trigger">
+          <text class="route-filter-label">目的地</text>
+          <text class="route-filter-value {{destinationFilterText ? 'route-filter-set' : ''}}">{{destinationFilterText || '不限'}}</text>
+          <text class="picker-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+    <view wx:if="{{placesLoading}}" class="meta route-filter-tip">地点加载中，也可选择“其他输入”</view>
+    <view wx:if="{{placesError}}" class="route-filter-retry" bindtap="loadPlaces">预设地点加载失败，点击重试</view>
+    <view wx:if="{{originCustomOpen}}" class="route-custom-row">
+      <input class="route-custom-input" value="{{originCustomDraft}}" bindinput="onOriginCustomInput" maxlength="100" placeholder="输入出发地筛选" />
+      <view class="route-custom-confirm" bindtap="confirmOriginCustom">确定</view>
+    </view>
+    <view wx:if="{{destinationCustomOpen}}" class="route-custom-row">
+      <input class="route-custom-input" value="{{destinationCustomDraft}}" bindinput="onDestinationCustomInput" maxlength="100" placeholder="输入目的地筛选" />
+      <view class="route-custom-confirm" bindtap="confirmDestinationCustom">确定</view>
+    </view>
+  </view>
+
+  <view wx:if="{{cards.length === 0}}" class="state-block">
+    <!-- 空态文案由 ts 侧区分：无订单 / 路线无匹配 / 无可加入订单。 -->
+    <view>{{emptyTitle}}</view>
+    <view class="meta">{{emptySub}}</view>
+  </view>
+
+  <view wx:else class="card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
     <!-- 标题行右侧浅灰 ›：暗示整卡可点进详情（点击行为仍是原有的 bindtap） -->
     <view class="prebook-head">
       <view class="route-line">{{item.route}}</view>

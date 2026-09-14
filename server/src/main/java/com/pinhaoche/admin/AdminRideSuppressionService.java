@@ -1,6 +1,5 @@
 package com.pinhaoche.admin;
 
-import com.pinhaoche.ride.RideService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,11 +10,8 @@ import java.time.ZoneOffset;
 @Service
 public class AdminRideSuppressionService {
     private final AdminRideSuppressionRepository repository;
-    private final RideService rideService;
-
-    public AdminRideSuppressionService(AdminRideSuppressionRepository repository, RideService rideService) {
+    public AdminRideSuppressionService(AdminRideSuppressionRepository repository) {
         this.repository = repository;
-        this.rideService = rideService;
     }
 
     public record SuppressionResult(long rideId, OffsetDateTime deletedAt, boolean alreadySuppressed) {
@@ -27,8 +23,6 @@ public class AdminRideSuppressionService {
      */
     @Transactional
     public SuppressionResult suppress(long rideId) {
-        // 应用服务是唯一跨模块入口；不存在时按既有 NOT_FOUND 语义失败。
-        rideService.get(rideId);
         return repository.findById(rideId)
                 .map(existing -> new SuppressionResult(rideId, existing.getDeletedAt(), true))
                 .orElseGet(() -> {
@@ -37,4 +31,7 @@ public class AdminRideSuppressionService {
                     return new SuppressionResult(rideId, deletedAt, false);
                 });
     }
+
+    @Transactional(readOnly = true)
+    public boolean isSuppressed(long rideId) { return repository.existsById(rideId); }
 }
