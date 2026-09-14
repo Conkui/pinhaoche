@@ -53,7 +53,7 @@
     <view class="meta">{{emptySub}}</view>
   </view>
 
-  <view wx:else class="card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
+  <view wx:if="{{cards.length > 0}}" class="card" wx:for="{{cards}}" wx:key="id" data-id="{{item.id}}" bindtap="openDetail">
     <!-- 标题行右侧浅灰 ›：暗示整卡可点进详情（点击行为仍是原有的 bindtap） -->
     <view class="prebook-head">
       <view class="route-line">{{item.route}}</view>
