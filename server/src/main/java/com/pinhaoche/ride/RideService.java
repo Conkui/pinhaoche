@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pinhaoche.common.api.ApiException;
 import com.pinhaoche.common.api.ErrorCode;
 import com.pinhaoche.common.idempotency.IdempotencyService;
-import com.pinhaoche.admin.AdminRideSuppressionService;
 import com.pinhaoche.feature.FeatureAvailabilityService;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
@@ -17,7 +16,6 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Ride 应用服务（Agent B 边界：Ride + 状态机 + 发布/取消/加入/人数并发/幂等；不处理聊天）。
@@ -35,13 +33,12 @@ public class RideService {
     private final ObjectMapper objectMapper;
     private final UserContactService userContactService;
     private final FeatureAvailabilityService featureAvailabilityService;
-    private final AdminRideSuppressionService suppressionService;
 
     public RideService(RideRepository rideRepository, RideMemberRepository memberRepository,
                        RideStateMachine stateMachine, PlaceService placeService,
                        IdempotencyService idempotency, OutboxEventRepository outboxRepository,
                        ObjectMapper objectMapper, UserContactService userContactService,
-                       FeatureAvailabilityService featureAvailabilityService, AdminRideSuppressionService suppressionService) {
+                       FeatureAvailabilityService featureAvailabilityService) {
         this.rideRepository = rideRepository;
         this.memberRepository = memberRepository;
         this.stateMachine = stateMachine;
@@ -51,7 +48,6 @@ public class RideService {
         this.objectMapper = objectMapper;
         this.userContactService = userContactService;
         this.featureAvailabilityService = featureAvailabilityService;
-        this.suppressionService = suppressionService;
     }
 
     // ---------- DTO（与 openapi.yaml schema 一一对应，字段增减属于契约变更） ----------
@@ -90,12 +86,13 @@ public class RideService {
                         // 用户红线：出发时间已过的单对所有人隐藏（过期任务会随后把状态落为 EXPIRED）
                         .findByStatusInAndDepartTimeAfterOrderByDepartTimeAsc(
                                 List.of(RideStatus.PUBLISHED, RideStatus.MATCHING), OffsetDateTime.now());
-                yield visibleDtos(rides);
+                yield rides.stream().map(RideService::toDto).toList();
             }
             case "BOOKED" -> {
                 // 实时拼独立控制“我已打上车”的供给和列表，不受找拼友开关影响。
                 featureAvailabilityService.requireRealtimeCarpoolEnabled();
-                yield visibleDtos(rideRepository.findByStatusOrderByUpdatedAtDesc(RideStatus.BOOKED));
+                yield rideRepository.findByStatusOrderByUpdatedAtDesc(RideStatus.BOOKED).stream()
+                        .map(RideService::toDto).toList();
             }
             default -> throw ApiException.validation("view 必须为 PREBOOK 或 BOOKED");
         };
@@ -103,14 +100,12 @@ public class RideService {
 
     @Transactional(readOnly = true)
     public RideDto get(long rideId) {
-        assertNotSuppressed(rideId);
         return rideRepository.findById(rideId).map(RideService::toDto)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
     }
 
     /**
-     * 管理端批量隐藏的存在性校验边界。它刻意不把 repository 暴露给 admin 模块，
-     * 并允许已隐藏记录通过校验，使重复删除仍保持幂等。
+     * 管理端物理删除前的存在性校验边界。它刻意不把 repository 暴露给 admin 模块。
      */
     @Transactional(readOnly = true)
     public void assertExistsForAdmin(long rideId) {
@@ -131,7 +126,6 @@ public class RideService {
      */
     @Transactional(readOnly = true)
     public void assertChatPeerAllowed(long rideId, long requesterId, long peerUserId) {
-        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (requesterId == ride.getOwnerId()) {
@@ -148,13 +142,12 @@ public class RideService {
     /** RFC-008：我的发布（含已取消/过期/结束），供"我的发布"管理页使用。 */
     @Transactional(readOnly = true)
     public List<RideDto> listMine(long ownerId) {
-        return visibleDtos(rideRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId));
+        return rideRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId).stream().map(RideService::toDto).toList();
     }
 
     /** RFC-012：仅订单 owner 可取最小联系人卡，不扩充冻结的 Ride DTO。 */
     @Transactional(readOnly = true)
     public List<MemberContactDto> listMemberContacts(long rideId, long ownerId) {
-        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() != ownerId) {
@@ -212,8 +205,6 @@ public class RideService {
 
     /** 包级可见以便针对"成功才写 Outbox"不变量做无需 Spring 上下文的单元测试。 */
     RideDto doJoin(long rideId, long userId) {
-        // 管理端已隐藏的测试/违规订单必须在写入成员、人数原子更新和通知前全部失效。
-        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() == userId) {
@@ -262,7 +253,6 @@ public class RideService {
     }
 
     private RideDto doTransit(long rideId, long userId, RideStatus target, long version) {
-        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() != userId) {
@@ -378,18 +368,14 @@ public class RideService {
         }
     }
 
-    /** 将一次查询的结果批量排除已隐藏订单，避免每张卡再执行一次 exists 查询。 */
-    private List<RideDto> visibleDtos(List<Ride> rides) {
-        Set<Long> suppressedIds = suppressionService.suppressedRideIds(
-                rides.stream().map(Ride::getId).toList());
-        return rides.stream().filter(ride -> !suppressedIds.contains(ride.getId())).map(RideService::toDto).toList();
-    }
-
-    /** 所有用户可达入口共用该门禁，防止旧链接在管理端隐藏后继续读写订单。 */
-    private void assertNotSuppressed(long rideId) {
-        if (suppressionService.isSuppressed(rideId)) {
-            throw ApiException.notFound("拼车记录不存在");
-        }
+    /**
+     * 物理删除的 Ride 模块边界：先删 ride_member，再删 ride，避免 admin 跨模块直连 Ride repository。
+     * 该方法由 AdminRideDeletionService 的外层事务协调；聊天、Outbox、幂等和历史审计均已在调用前清理，
+     * 所以任一删除失败会使整个清理事务回滚，而不会留下半个订单。
+     */
+    public void deleteForAdmin(long rideId) {
+        memberRepository.deleteByRideId(rideId);
+        rideRepository.deleteById(rideId);
     }
 
     private static RideDto toDto(Ride r) {
