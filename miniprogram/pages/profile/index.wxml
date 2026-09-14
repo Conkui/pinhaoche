@@ -33,7 +33,7 @@
       bindinput="onNicknameInput"
     />
   </view>
-  <view class="meta">当前昵称：{{user.nickname}} · 点击昵称输入框可填入微信昵称（真机自动填充，工具内需手填）</view>
+ 
 
   <!-- 本页唯一 Primary Action -->
   <view class="btn-primary profile-save {{canSave ? '' : 'disabled'}}" bindtap="onSubmit">{{saving ? '保存中…' : '保存资料'}}</view>
@@ -53,8 +53,6 @@
 </view>
 
 <view class="card">
-  <view class="meta">拼好车 · 面向学校学生的拼车小程序</view>
-  <view class="meta" style="margin-top:8rpx">版本 {{version}}（契约 CONTRACT_FREEZE_V1）</view>
   <view style="margin-top:24rpx">
     <view class="btn-plain" bindtap="relogin">重新登录</view>
   </view>
