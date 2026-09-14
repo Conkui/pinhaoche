@@ -7,7 +7,7 @@
 
 <view wx:elif="{{sessions.length === 0}}" class="state-block">
   <view>还没有聊天</view>
-  <view class="meta">在"已打上"或"预打车"里联系车主即可开始</view>
+  <view class="meta">在"实时拼"或"找拼友"里联系车主即可开始</view>
 </view>
 
 <view wx:else>

@@ -13,3 +13,24 @@
   margin-top: 16rpx;
   padding-top: 24rpx;
 }
+
+/* 头像：用户已设置 avatar 时才渲染真实图片（占位底色便于加载中区分） */
+.avatar-img {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: #f3f4f6;
+}
+
+/* 头像兜底：昵称首字符放在主色渐变色块里（无图片资源依赖，修复 avatar-default.png 404） */
+.avatar-fallback {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  background: linear-gradient(135deg, #4096ff, #1677ff);
+  color: #ffffff;
+  font-size: 40rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

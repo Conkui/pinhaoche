@@ -15,3 +15,37 @@
   font-size: 32rpx;
   color: #9ca3af;
 }
+
+/* ---------- 联系发布者：弱化次级小按钮（用户 2026-09-14） ----------
+   本页 Primary 是悬浮吸底的"发布预打车"，联系入口改为浅蓝底 #e8f1ff +
+   主色文字 + 胶囊圆角，高度 60rpx / 字号 26rpx，视觉优先级明显低于主按钮。
+   不复用全局 .btn-plain（30rpx 字号 + 16rpx 圆角偏大，仍会与主按钮抢层级）。 */
+.btn-contact-mini {
+  display: inline-block;
+  height: 60rpx;
+  line-height: 60rpx;
+  padding: 0 36rpx;
+  font-size: 26rpx;
+  color: #1677ff;
+  background: #e8f1ff;
+  border-radius: 999rpx;
+}
+
+/* ---------- 悬浮发布按钮（本页唯一 Primary Action） ---------- */
+
+/* 吸底固定 + 宽度 70% 居中：发布是本页核心转化入口，任何滚动位置都必须可见；
+   底部叠加 iPhone 底部安全区（tab 页 webview 在原生 tabBar 之上，非 tab 场景也能兜底）。
+   渐变与投影复用全局 .btn-primary，此类只负责定位，避免复制视觉令牌。 */
+.publish-fab {
+  position: fixed;
+  left: 15%;
+  right: 15%;
+  bottom: calc(env(safe-area-inset-bottom) + 32rpx);
+  z-index: 100;
+}
+
+/* 列表底部占位：按钮高约 92rpx + 距底 32rpx + 上下呼吸空间，再叠加底部安全区，
+   保证最后一张卡完整可读、可点击，不被悬浮按钮遮挡 */
+.fab-safe-space {
+  height: calc(240rpx + env(safe-area-inset-bottom));
+}

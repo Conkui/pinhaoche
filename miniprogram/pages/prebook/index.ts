@@ -30,6 +30,9 @@ Page({
     loading: true,
     loadFailed: false,
     cards: [] as PrebookCard[],
+    /** 空态文案：区分两种"空"——没人发布 / 有单但全部不可加入（被过滤） */
+    emptyTitle: '还没有人发布预打车',
+    emptySub: '点下方按钮发布第一条',
   },
 
   onShow() {
@@ -44,10 +47,13 @@ Page({
     getApp().ensureLogin()
       .then(() => rideApi.listRides('PREBOOK'))
       .then((rides: Ride[]) => {
-        this.setData({
-          loading: false,
-          loadFailed: false,
-          cards: rides.map((r) => ({
+        // 用户红线（2026-09-14）"不能拼的不要显示"：joinable=false（已满/状态不可加入）
+        // 的单在数据层直接过滤、完全不渲染，而不是 wxml 里隐藏——避免渲染无意义节点，
+        // 也保证 contactOwner/openDetail 只可能命中可加入的单。
+        // 注意：过滤会产生第二种空态（有单但全被过滤），emptyTitle/emptySub 在 ts 侧
+        // 按"原始列表是否为空"区分，wxml 不重复判断。
+        const cards = rides
+          .map((r) => ({
             id: r.id,
             ownerId: r.ownerId,
             route: `${r.origin.text} → ${r.destination.text}`,
@@ -58,7 +64,14 @@ Page({
             statusLabel: STATUS_LABELS[r.status] ?? r.status,
             statusClass: STATUS_TAG_CLASS[r.status] ?? 'status-tag-neutral',
             joinable: JOINABLE.includes(r.status) && remainingSeats(r.memberCount, r.capacity) > 0,
-          })),
+          }))
+          .filter((c) => c.joinable)
+        this.setData({
+          loading: false,
+          loadFailed: false,
+          cards,
+          emptyTitle: rides.length === 0 ? '还没有人发布预打车' : '暂无可加入的拼车单',
+          emptySub: rides.length === 0 ? '点下方按钮发布第一条' : '已满或不可加入的拼车单已隐藏',
         })
         done?.()
       })
@@ -73,7 +86,8 @@ Page({
     this.reload()
   },
 
-  /** 卡片唯一 Primary Action：联系发布者。详情页才提供加入（UI_SPEC：每页一个 Primary）。 */
+  /** 联系发布者：次级小按钮（用户 2026-09-14 弱化），仅负责建会话跳聊天；
+   *  本页唯一 Primary Action 是悬浮吸底的"发布预打车"（UI_SPEC：每页一个 Primary）。 */
   contactOwner(e: WechatMiniprogram.TouchEvent) {
     const card = this.data.cards.find((c) => c.id === e.currentTarget.dataset.id)
     if (!card) {

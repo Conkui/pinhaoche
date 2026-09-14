@@ -1,5 +1,7 @@
-// app.ts：全局登录态管理。V1 只有微信静默登录（wx.login code → /auth/login 换 token）。
+// app.ts：全局登录态管理 + 全局异常捕获（onError / onUnhandledRejection / onPageNotFound）。
+// V1 只有微信静默登录（wx.login code → /auth/login 换 token）。
 import { login } from './services/auth'
+import { logger } from './utils/logger'
 
 interface UserInfo {
   id: number
@@ -50,6 +52,41 @@ App({
       wx.setStorageSync('phc_token', res.token)
       wx.setStorageSync('phc_user', res.user)
       return res.user
+    })
+  },
+
+  /**
+   * 全局脚本异常捕获：页面/服务未 catch 的异常统一落到这里，由 logger 记录
+   * （本地精简摘要 + 静默上报关键日志），不影响小程序其余部分继续运行。
+   * 一般性异常不再需要页面层层 try/catch，从源头减少控制台爆红。
+   */
+  onError(err) {
+    logger.error('app.onError', err)
+  },
+
+  /**
+   * 未处理的 Promise 拒绝（异步链漏 catch 是"控制台频繁爆红"的主要来源）。
+   * 与 onError 同口径记录；仅记录不提示用户——未捕获拒绝多数不影响主流程。
+   */
+  onUnhandledRejection(res) {
+    logger.error('unhandledRejection', res.reason)
+  },
+
+  /**
+   * 页面不存在兜底（如分享卡片指向已下线页面）：不处理时微信会推入原生
+   * "页面不存在"死胡同页。这里 switchTab 回首页 tab（pages/booked/index 在
+   * app.json tabBar 中声明，必然存在；tab 页必须用 switchTab，navigateTo 会失败），
+   * 保证用户至少能继续使用核心功能而不是白屏。记 warn 不记 error：
+   * 属可恢复的导航问题而非代码崩溃，不上报以降噪。
+   */
+  onPageNotFound(res) {
+    logger.warn('app.onPageNotFound', `页面不存在: ${res.path}`, {
+      query: res.query,
+      isEntryPage: res.isEntryPage,
+    })
+    wx.switchTab({
+      url: '/pages/booked/index',
+      fail: () => {}, // 首页 tab 必然存在；fail 留空，兜底本身绝不制造新一轮爆红
     })
   },
 })

@@ -10,3 +10,6 @@ scripts/.rid15
 docs/ui-preview/preview-*.png
 .DS_Store
 docs/ui-preview/admin-*.png
+
+# 微信开发者工具的个人本地配置（含各人 urlCheck/调试选项），按官方建议不入版本库
+miniprogram/project.private.config.json

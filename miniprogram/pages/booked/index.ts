@@ -1,4 +1,4 @@
-// 已打上列表（首页）。视觉顺序：出发地→目的地 / 立即联系 / 余位 / 车牌 / 剩余距离（UI_SPEC）。
+// 实时拼（原"已打上"）列表（首页）。视觉顺序：出发地→目的地 / 立即联系 / 余位 / 车牌 / 剩余距离（UI_SPEC）。
 import * as rideApi from '../../services/ride'
 import { Ride } from '../../services/ride'
 import { formatDistance, remainingSeats, waitingText } from '../../utils/format'

@@ -10,8 +10,8 @@
 
 | 页面（路径） | Primary Action（UI_SPEC） | 接口 / 协议 | 请求 | 响应/结果 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| 已打上 `pages/booked` | 立即联系车主 | ① `GET /api/v1/rides?view=BOOKED`<br>② `POST /api/v1/chat-sessions`<br>③ WebSocket `/ws/v1/chat` | ② `{rideId, peerUserId=ownerId}` | ② `ChatSession` → 跳聊天页 | 卡片视觉顺序：路线/联系/余位/车牌/距离；满员按钮置灰 |
-| 预打车 `pages/prebook` | 联系发布者 | ① `GET /api/v1/rides?view=PREBOOK`<br>② `POST /api/v1/chat-sessions` | 同上 | 同上 | 整卡点击进详情；卡片顺序：路线>时间>人数>备注 |
+| 实时拼 `pages/booked`（Tab 文案"实时拼"，标题"实时拼车"） | 立即联系车主 | ① `GET /api/v1/rides?view=BOOKED`<br>② `POST /api/v1/chat-sessions`<br>③ WebSocket `/ws/v1/chat` | ② `{rideId, peerUserId=ownerId}` | ② `ChatSession` → 跳聊天页 | 卡片视觉顺序：路线/联系/余位/车牌/距离；满员按钮置灰 |
+| 找拼友 `pages/prebook`（Tab 文案"找拼友"） | 发布预打车（悬浮固定底部） | ① `GET /api/v1/rides?view=PREBOOK`<br>② `POST /api/v1/chat-sessions` | 同上 | 同上 | 整卡点击进详情；不可加入的卡片不渲染；卡片内"联系发布者"为次级按钮 |
 | 消息 `pages/messages` | 打开会话 | `GET /api/v1/chat-sessions`（RFC-001） | - | `ChatSessionSummary[]`（含 unreadCount） | 未读角标取 unreadCount |
 | 我的 `pages/profile` | 重新登录 | `wx.login` + `POST /api/v1/auth/login`（RFC-002） | `{code}` | `LoginResponse {token, user}` | token 存 storage，全局 Bearer |
 | 发布预打车 `pages/publish` | 发布 | `POST /api/v1/rides` | `CreateRideRequest` + `Idempotency-Key` | 201 `Ride` | 提交按钮持有幂等键，失败重试复用 |

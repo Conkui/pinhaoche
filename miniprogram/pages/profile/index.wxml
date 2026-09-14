@@ -1,6 +1,10 @@
 <view wx:if="{{user}}" class="card">
   <view style="display:flex;align-items:center">
-    <image src="{{user.avatar || '/images/avatar-default.png'}}" style="width:96rpx;height:96rpx;border-radius:48rpx;background:#e5e7eb" />
+    <!-- 头像：仅有值（user.avatar）时才渲染 image 标签；否则用昵称首字符渐变色块兜底。
+         为什么：原实现回退引用本地 /images/avatar-default.png，但该资源不存在，
+         渲染层每次加载都 404 报错刷屏。首字符色块无任何资源依赖，彻底消除 404。 -->
+    <image wx:if="{{user.avatar}}" src="{{user.avatar}}" class="avatar-img" />
+    <view wx:else class="avatar-fallback">{{user.nickname[0]}}</view>
     <view style="margin-left:24rpx">
       <view style="font-weight:600;font-size:34rpx">{{user.nickname}}</view>
       <view class="meta">ID {{user.id}}</view>

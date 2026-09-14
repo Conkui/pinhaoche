@@ -6,8 +6,9 @@
 </view>
 
 <view wx:elif="{{cards.length === 0}}" class="state-block">
-  <view>还没有人发布预打车</view>
-  <view class="meta">点右下角发布第一条</view>
+  <!-- 空态两种文案由 ts 侧计算：没人发布 / 有单但全部不可加入（被数据层过滤） -->
+  <view>{{emptyTitle}}</view>
+  <view class="meta">{{emptySub}}</view>
 </view>
 
 <block wx:else>
@@ -22,12 +23,17 @@
     <view class="meta" wx:if="{{item.remark}}">备注：{{item.remark}}</view>
     <!-- 状态标签按语义着色（ts 侧映射）：待同行=蓝 info、匹配中=绿 success、已满/过期=灰 neutral -->
     <view style="margin-top:16rpx"><text class="{{item.statusClass}}">{{item.statusLabel}}</text></view>
+    <!-- 联系发布者弱化为次级小按钮（浅蓝底胶囊）：视觉优先级必须明显低于
+         悬浮吸底的"发布预打车"主按钮，避免两个 primary 抢焦点（用户 2026-09-14） -->
     <view style="margin-top:20rpx" wx:if="{{item.joinable}}">
-      <view class="btn-primary" data-id="{{item.id}}" catchtap="contactOwner">联系发布者</view>
+      <view class="btn-contact-mini" data-id="{{item.id}}" catchtap="contactOwner">联系发布者</view>
     </view>
   </view>
 </block>
 
-<view style="padding:20rpx 24rpx 40rpx">
-  <view class="btn-primary" bindtap="goPublish">发布预打车</view>
-</view>
+<!-- 底部安全占位：悬浮按钮固定吸底，列表末尾留足空间，防止最后一张卡被遮挡 -->
+<view class="fab-safe-space"></view>
+
+<!-- 悬浮发布按钮：本页唯一 Primary Action，复用全局 .btn-primary 渐变+投影，
+     本元素只附加定位样式；固定吸底保证任意滚动位置都能发布 -->
+<view class="publish-fab btn-primary" bindtap="goPublish">发布预打车</view>

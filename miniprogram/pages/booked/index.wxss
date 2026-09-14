@@ -1,26 +1,6 @@
-/* 已打上页：hero 引流区 + 卡片微调；基础令牌（card/btn/route/meta）走全局 app.wxss */
-
-/* hero：#e8f1ff → #f5f7fa 极浅同色系渐变，向下自然融入页面背景。
-   只用颜色制造层级，不用图片、不加阴影，控制视觉噪音 */
-.hero {
-  height: 140rpx;
-  box-sizing: border-box;
-  padding: 32rpx 32rpx 0;
-  background: linear-gradient(180deg, #e8f1ff, #f5f7fa);
-}
-
-/* 页面大标题字阶：34rpx/600（RFC-007） */
-.hero-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.hero-sub {
-  margin-top: 4rpx;
-  font-size: 24rpx;
-  color: #6b7280;
-}
+/* 实时拼页（原"已打上"）：卡片微调；基础令牌（card/btn/route/meta）走全局 app.wxss。
+   用户 2026-09-14 已移除顶部 hero 引流区，列表直接从页面顶部开始，
+   此处不再保留任何 hero 相关样式 */
 
 /* 路线行与右侧"已满"标签左右分布，标签不挤占路线宽度 */
 .booked-head {

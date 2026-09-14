@@ -1,10 +1,5 @@
-<!-- 顶部 hero：RFC-007 允许的浅色渐变引流区（#e8f1ff→#f5f7fa 极浅同色系），
-     提升首页层级但不违反"禁止大面积花哨渐变"红线 -->
-<view class="hero">
-  <view class="hero-title">有人已经打上车了</view>
-  <view class="hero-sub">联系车主问问还能不能捎你一段</view>
-</view>
-
+<!-- 用户 2026-09-14：移除顶部 hero 引流区，列表直接从页面顶部开始，
+     信息密度优先，减少进入列表前的视觉过渡 -->
 <view wx:if="{{loading}}" class="state-block">加载中…</view>
 
 <view wx:elif="{{loadFailed}}" class="state-block">
