@@ -8,7 +8,6 @@ import com.pinhaoche.ride.RideService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -45,19 +44,19 @@ public class AdminRideDeletionService {
     @Transactional
     public DeletionResult delete(long rideId) {
         validateRideId(rideId);
-        // 先查存在性，确保 DELETE 404 不会被静默当作成功，也避免半清理。
-        rideService.assertExistsForAdmin(rideId);
+        // 先锁住订单行，确保 DELETE 404 不会被静默当作成功，也阻止并发写在清理后留下新事件。
+        rideService.lockForAdminDeletion(rideId);
         deleteOne(rideId);
         return new DeletionResult(rideId);
     }
 
     @Transactional
     public BulkDeletionResult deleteAll(List<Long> rideIds) {
-        Set<Long> distinctIds = distinctPositiveIds(rideIds);
-        // 先校验整批，任何一个 ID 无效时不会删除前面的有效订单。
-        distinctIds.forEach(rideService::assertExistsForAdmin);
-        distinctIds.forEach(this::deleteOne);
-        return new BulkDeletionResult(distinctIds.size(), distinctIds.size());
+        List<Long> orderedIds = distinctPositiveIds(rideIds).stream().sorted().toList();
+        // 按固定 ID 顺序先锁整批，避免多个管理员交叉批量删除时死锁；任何无效 ID 都不会开始清理。
+        orderedIds.forEach(rideService::lockForAdminDeletion);
+        orderedIds.forEach(this::deleteOne);
+        return new BulkDeletionResult(orderedIds.size(), orderedIds.size());
     }
 
     private void deleteOne(long rideId) {

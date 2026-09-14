@@ -37,7 +37,7 @@ public class AdminRideDeletionController {
      * 保留既有路径，以便已经部署的后台静态页升级后仍可调用；语义已改为物理删除。
      * 只接受明确勾选的订单 ID，绝不提供“按条件全删”，降低生产误删风险。
      */
-    @PostMapping("/bulk-suppress")
+    @PostMapping({"/bulk-delete", "/bulk-suppress"})
     public AdminRideDeletionService.BulkDeletionResult bulkDelete(
             @Valid @RequestBody BulkDeleteRequest request) {
         try {

@@ -35,7 +35,7 @@ class AdminRideDeletionServiceTest {
 
         assertThat(result.rideId()).isEqualTo(12L);
         InOrder order = inOrder(rides, chats, outbox, idempotency);
-        order.verify(rides).assertExistsForAdmin(12L);
+        order.verify(rides).lockForAdminDeletion(12L);
         order.verify(chats).deleteRideDataForAdmin(12L);
         order.verify(outbox).deleteByAggregateTypeAndAggregateId("ride", 12L);
         order.verify(idempotency).deleteRideRecordsByResourceId(12L);
@@ -49,8 +49,8 @@ class AdminRideDeletionServiceTest {
         assertThat(result.requested()).isEqualTo(2);
         assertThat(result.deleted()).isEqualTo(2);
         InOrder order = inOrder(rides, chats);
-        order.verify(rides).assertExistsForAdmin(12L);
-        order.verify(rides).assertExistsForAdmin(34L);
+        order.verify(rides).lockForAdminDeletion(12L);
+        order.verify(rides).lockForAdminDeletion(34L);
         order.verify(chats).deleteRideDataForAdmin(12L);
         order.verify(chats).deleteRideDataForAdmin(34L);
     }
@@ -74,7 +74,7 @@ class AdminRideDeletionServiceTest {
         assertThatThrownBy(() -> service.deleteAll(List.of(12L, 0L)))
                 .isInstanceOf(IllegalArgumentException.class);
 
-        verify(rides, never()).assertExistsForAdmin(12L);
+        verify(rides, never()).lockForAdminDeletion(12L);
         verify(chats, never()).deleteRideDataForAdmin(12L);
     }
 }

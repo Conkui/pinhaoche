@@ -114,6 +114,16 @@ public class RideService {
         }
     }
 
+    /**
+     * 管理端物理删除的并发屏障。锁会保持到 AdminRideDeletionService 的外层事务提交，
+     * 使加入、状态迁移等更新在订单删掉后只能回滚/报不存在，不能留下孤儿 Outbox。
+     */
+    @Transactional(readOnly = true)
+    public void lockForAdminDeletion(long rideId) {
+        rideRepository.findByIdForAdminDeletion(rideId)
+                .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
+    }
+
     /** 详情保持既有冻结 Ride DTO；联系人由 RFC-012 的 owner-only 独立端点提供。 */
     @Transactional(readOnly = true)
     public RideDto getForViewer(long rideId, long viewerId) {

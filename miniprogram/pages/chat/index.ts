@@ -95,6 +95,7 @@ Page({
       state: 'acked' as const,
     }))
     this.lastMessageId = list.length > 0 ? list[list.length - 1].id : 0
+    this.rebuildPendingIndex(bubbles)
     this.setData({ bubbles, scrollTop: bubbles.length * 1000 })
   },
 
@@ -170,6 +171,19 @@ Page({
       data[`${key}.${k}`] = v
     })
     this.setData(data)
+  },
+
+  /**
+   * pendingIndex 缓存的是数组下标；历史刷新或删除气泡后下标会变化，必须重建。
+   * 否则随后 ACK/ERROR 可能把状态写到另一条消息上。
+   */
+  rebuildPendingIndex(bubbles: readonly Bubble[]) {
+    this.pendingIndex = {}
+    bubbles.forEach((bubble, index) => {
+      if (bubble.state === 'sending' || bubble.state === 'failed') {
+        this.pendingIndex[bubble.clientMsgId] = index
+      }
+    })
   },
 
   onInput(e: WechatMiniprogram.Input) {
@@ -273,13 +287,16 @@ Page({
       return
     }
     const deleted = this.data.bubbles[index]
-    this.setData({ bubbles: this.data.bubbles.filter((bubble) => bubble.messageId !== messageId) })
+    const remaining = this.data.bubbles.filter((bubble) => bubble.messageId !== messageId)
+    this.rebuildPendingIndex(remaining)
+    this.setData({ bubbles: remaining })
     chatApi.deleteMessage(this.data.sessionId, messageId)
       .catch(() => {
         // 重连补偿可能已令列表变化；按当前长度夹住下标即可保留其余消息顺序。
         const bubbles = this.data.bubbles.slice()
         if (!bubbles.some((bubble) => bubble.messageId === messageId)) {
           bubbles.splice(Math.min(index, bubbles.length), 0, deleted)
+          this.rebuildPendingIndex(bubbles)
           this.setData({ bubbles })
         }
         wx.showToast({ title: '删除失败，请重试', icon: 'none' })

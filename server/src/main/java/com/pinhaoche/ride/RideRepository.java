@@ -15,6 +15,11 @@ import java.util.Optional;
 
 public interface RideRepository extends JpaRepository<Ride, Long> {
 
+    /** 管理员物理删除前锁住订单行，阻止并发加入/状态迁移在清理 Outbox 后写入新事件。 */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Ride r WHERE r.id = :id")
+    Optional<Ride> findByIdForAdminDeletion(@Param("id") long id);
+
     List<Ride> findByStatusOrderByUpdatedAtDesc(RideStatus status);
 
     /** RFC-008：我的发布（含终态），按创建时间倒序。 */
