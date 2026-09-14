@@ -1,9 +1,10 @@
 // Ride 详情页：按状态显示"加入"或"不再等人"等唯一 Primary Action（UI_SPEC）。
 // 取消等危险操作需二次确认（UI_SPEC）。
 import * as rideApi from '../../services/ride'
-import { Ride } from '../../services/ride'
+import { MemberContact, Ride } from '../../services/ride'
 import { uuid } from '../../services/request'
-import { formatDistance, formatTime, remainingSeats, waitingText, STATUS_LABELS } from '../../utils/format'
+import { SERVER_ORIGIN } from '../../config'
+import { absoluteUrl, formatDistance, formatTime, remainingSeats, waitingText, STATUS_LABELS } from '../../utils/format'
 
 const JOINABLE = ['PUBLISHED', 'MATCHING', 'BOOKED']
 
@@ -23,6 +24,7 @@ Page({
     waiting: '',
     joining: false,
     canceling: false,
+    memberAvatarUrls: {} as Record<number, string>,
   },
 
   onLoad(query: Record<string, string>) {
@@ -41,6 +43,20 @@ Page({
       .then((ride: Ride) => {
         const userId = app.globalData.user?.id
         this.applyRide(ride, userId ?? 0)
+        if (ride.ownerId !== userId) {
+          done?.()
+          return null
+        }
+        return rideApi.listMemberContacts(ride.id)
+      })
+      .then((memberContacts: MemberContact[] | null) => {
+        if (memberContacts === null) {
+          return
+        }
+        const ride = this.data.ride
+        if (ride) {
+          this.setData({ ride: { ...ride, memberContacts } })
+        }
         done?.()
       })
       .catch(() => {
@@ -63,6 +79,10 @@ Page({
       seats,
       distance: formatDistance(ride.remainingDistance, ride.distanceUpdatedAt),
       waiting: waitingText(ride.waitingMinutes),
+      // 后端只存相对头像路径；小程序 image 必须按当前服务端 origin 拼成绝对地址。
+      memberAvatarUrls: Object.fromEntries((ride.memberContacts ?? []).map((member) => [
+        member.userId, absoluteUrl(member.avatar, SERVER_ORIGIN),
+      ])),
     })
   },
 
@@ -146,6 +166,25 @@ Page({
     }
     wx.showLoading({ title: '连接中' })
     require('../../services/chat').ensureSession(ride.id, ride.ownerId)
+      .then((session: { id: number; peerUserId: number }) => {
+        wx.hideLoading()
+        wx.navigateTo({ url: `/pages/chat/index?sessionId=${session.id}&peerUserId=${session.peerUserId}` })
+      })
+      .catch((err: Error) => {
+        wx.hideLoading()
+        wx.showToast({ title: err.message, icon: 'none' })
+      })
+  },
+
+  /** 车主只可对本订单服务端返回的成员建会话，后端会按 rideId + peerUserId 创建或复用。 */
+  contactMember(e: WechatMiniprogram.TouchEvent) {
+    const ride = this.data.ride
+    const memberId = Number(e.currentTarget.dataset.memberId)
+    if (!ride || !this.data.isMine || !ride.memberContacts?.some((member) => member.userId === memberId)) {
+      return
+    }
+    wx.showLoading({ title: '连接中' })
+    require('../../services/chat').ensureSession(ride.id, memberId)
       .then((session: { id: number; peerUserId: number }) => {
         wx.hideLoading()
         wx.navigateTo({ url: `/pages/chat/index?sessionId=${session.id}&peerUserId=${session.peerUserId}` })

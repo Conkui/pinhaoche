@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pinhaoche.common.api.ApiException;
 import com.pinhaoche.common.api.ErrorCode;
 import com.pinhaoche.common.idempotency.IdempotencyService;
+import com.pinhaoche.feature.FeatureAvailabilityService;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
 import com.pinhaoche.place.PlaceService;
+import com.pinhaoche.user.UserContactService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,11 +31,14 @@ public class RideService {
     private final IdempotencyService idempotency;
     private final OutboxEventRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final UserContactService userContactService;
+    private final FeatureAvailabilityService featureAvailabilityService;
 
     public RideService(RideRepository rideRepository, RideMemberRepository memberRepository,
                        RideStateMachine stateMachine, PlaceService placeService,
                        IdempotencyService idempotency, OutboxEventRepository outboxRepository,
-                       ObjectMapper objectMapper) {
+                       ObjectMapper objectMapper, UserContactService userContactService,
+                       FeatureAvailabilityService featureAvailabilityService) {
         this.rideRepository = rideRepository;
         this.memberRepository = memberRepository;
         this.stateMachine = stateMachine;
@@ -41,6 +46,8 @@ public class RideService {
         this.idempotency = idempotency;
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
+        this.userContactService = userContactService;
+        this.featureAvailabilityService = featureAvailabilityService;
     }
 
     // ---------- DTO（与 openapi.yaml schema 一一对应，字段增减属于契约变更） ----------
@@ -59,6 +66,10 @@ public class RideService {
             implements IdempotencyService.Resource {
     }
 
+    /** RFC-012 最小联系人卡：仅车主的我的发布/详情响应可携带，绝不含 openid 等直接身份信息。 */
+    public record MemberContactDto(long userId, String nickname, String avatar) {
+    }
+
     public record TransitionRequest(RideStatus targetStatus, long version) {
     }
 
@@ -68,11 +79,15 @@ public class RideService {
     @Transactional(readOnly = true)
     public List<RideDto> list(String view) {
         return switch (view) {
-            case "PREBOOK" -> rideRepository
-                    // 用户红线：出发时间已过的单对所有人隐藏（过期任务会随后把状态落为 EXPIRED）
-                    .findByStatusInAndDepartTimeAfterOrderByDepartTimeAsc(
-                            List.of(RideStatus.PUBLISHED, RideStatus.MATCHING), OffsetDateTime.now())
-                    .stream().map(RideService::toDto).toList();
+            case "PREBOOK" -> {
+                // 关闭后服务端同样拒绝返回实时拼数据，不能只依赖小程序公告页。
+                featureAvailabilityService.requireRealtimeCarpoolEnabled();
+                yield rideRepository
+                        // 用户红线：出发时间已过的单对所有人隐藏（过期任务会随后把状态落为 EXPIRED）
+                        .findByStatusInAndDepartTimeAfterOrderByDepartTimeAsc(
+                                List.of(RideStatus.PUBLISHED, RideStatus.MATCHING), OffsetDateTime.now())
+                        .stream().map(RideService::toDto).toList();
+            }
             case "BOOKED" -> rideRepository.findByStatusOrderByUpdatedAtDesc(RideStatus.BOOKED)
                     .stream().map(RideService::toDto).toList();
             default -> throw ApiException.validation("view 必须为 PREBOOK 或 BOOKED");
@@ -85,6 +100,31 @@ public class RideService {
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
     }
 
+    /** 详情保持既有冻结 Ride DTO；联系人由 RFC-012 的 owner-only 独立端点提供。 */
+    @Transactional(readOnly = true)
+    public RideDto getForViewer(long rideId, long viewerId) {
+        return get(rideId);
+    }
+
+    /**
+     * 聊天会话的订单关系门禁。公开列表中的用户仍可联系该单发布者；但只有发布者能联系
+     * 已实际加入本订单的成员，避免客户端伪造 peerUserId 后任意查看或骚扰其他用户。
+     */
+    @Transactional(readOnly = true)
+    public void assertChatPeerAllowed(long rideId, long requesterId, long peerUserId) {
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
+        if (requesterId == ride.getOwnerId()) {
+            if (!memberRepository.existsByRideIdAndUserId(rideId, peerUserId)) {
+                throw ApiException.forbidden("只能联系已加入该订单的拼友");
+            }
+            return;
+        }
+        if (peerUserId != ride.getOwnerId()) {
+            throw ApiException.forbidden("非发布者只能联系该订单发布者");
+        }
+    }
+
     /** RFC-008：我的发布（含已取消/过期/结束），供"我的发布"管理页使用。 */
     @Transactional(readOnly = true)
     public List<RideDto> listMine(long ownerId) {
@@ -92,10 +132,22 @@ public class RideService {
                 .stream().map(RideService::toDto).toList();
     }
 
+    /** RFC-012：仅订单 owner 可取最小联系人卡，不扩充冻结的 Ride DTO。 */
+    @Transactional(readOnly = true)
+    public List<MemberContactDto> listMemberContacts(long rideId, long ownerId) {
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
+        if (ride.getOwnerId() != ownerId) {
+            throw ApiException.forbidden("只有发布者可以查看已加入的拼友");
+        }
+        return memberContacts(rideId);
+    }
+
     // ---------- 发布（预打车，幂等接口） ----------
 
     @Transactional
     public RideDto create(long ownerId, CreateRideRequest req, String idempotencyKey) {
+        featureAvailabilityService.requireRealtimeCarpoolEnabled();
         validateCapacity(req.memberCount(), req.capacity());
         validateStatusFields(req);
         return idempotency.execute(ownerId, idempotencyKey, "ride.create", req,
@@ -133,11 +185,13 @@ public class RideService {
      */
     @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public RideDto join(long rideId, long userId, String idempotencyKey) {
+        featureAvailabilityService.requireRealtimeCarpoolEnabled();
         return idempotency.execute(userId, idempotencyKey, "ride.join", rideId,
                 id -> get(rideId), () -> doJoin(rideId, userId));
     }
 
-    private RideDto doJoin(long rideId, long userId) {
+    /** 包级可见以便针对"成功才写 Outbox"不变量做无需 Spring 上下文的单元测试。 */
+    RideDto doJoin(long rideId, long userId) {
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() == userId) {
@@ -154,8 +208,10 @@ public class RideService {
                     List.copyOf(RideStateMachine.JOINABLE), RideStatus.PUBLISHED, RideStatus.MATCHING);
             if (updated == 1) {
                 memberRepository.save(new RideMember(rideId, userId, "CONFIRMED", OffsetDateTime.now()));
+                // 只有原子抢位成功并已写入成员记录后才写事件：幂等回放、重复加入或抢位失败均不会通知车主。
+                // 事件与 ride_member 同事务提交，由 notification 模块异步处理，避免业务写入依赖 MQ 可用性。
                 emit(rideId, "RideMemberJoined", Map.of(
-                        "rideId", rideId, "userId", userId,
+                        "rideId", rideId, "userId", userId, "ownerId", ride.getOwnerId(),
                         "memberCount", ride.getMemberCount() + 1));
                 return get(rideId);
             }
@@ -304,6 +360,17 @@ public class RideService {
                 r.getDepartTime(), r.getMemberCount(), r.getCapacity(), r.getStatus(),
                 r.getPlateNumber(), r.getProvider(), r.getRemainingDistance(),
                 r.getDistanceUpdatedAt(), r.getWaitingMinutes(), r.getVersion(), r.getRemark());
+    }
+
+    /**
+     * 跨模块只调用 user 的应用服务拿最小资料；Ride 不得直接读取 app_user 表或泄露 openid。
+     * 成员记录与用户资料任一缺失时安全降级为不展示该联系人，客户端也无法据此创建会话。
+     */
+    private List<MemberContactDto> memberContacts(long rideId) {
+        List<Long> memberIds = memberRepository.findByRideIdOrderByCreatedAtAsc(rideId).stream()
+                .map(RideMember::getUserId).toList();
+        return userContactService.findContactCards(memberIds).stream()
+                .map(card -> new MemberContactDto(card.id(), card.nickname(), card.avatar())).toList();
     }
 
     // ---------- RFC-009 管理端只读能力（只追加，不动既有方法；AdminRideController 与 admin StatsController 使用） ----------

@@ -1,6 +1,8 @@
 // 预打车列表 + 发布入口。视觉顺序：路线 > 出发时间 > 同行人数 > 其他（规范 §7）。
 import * as rideApi from '../../services/ride'
 import { Ride } from '../../services/ride'
+import * as featureApi from '../../services/feature'
+import { RealtimeCarpoolAvailability } from '../../services/feature'
 import { formatTime, remainingSeats, STATUS_LABELS } from '../../utils/format'
 
 interface PrebookCard {
@@ -29,6 +31,9 @@ Page({
   data: {
     loading: true,
     loadFailed: false,
+    /** 运营关闭时不请求/渲染拼车单，改为单一公告态，避免旧缓存造成误导。 */
+    realtimeEnabled: true,
+    announcement: '',
     cards: [] as PrebookCard[],
     /** 空态文案：区分两种"空"——没人发布 / 有单但全部不可加入（被过滤） */
     emptyTitle: '还没有人发布预打车',
@@ -45,8 +50,27 @@ Page({
 
   reload(done?: () => void) {
     getApp().ensureLogin()
-      .then(() => rideApi.listRides('PREBOOK'))
-      .then((rides: Ride[]) => {
+      .then(() => featureApi.getRealtimeCarpoolAvailability())
+      .then((availability: RealtimeCarpoolAvailability) => {
+        if (!availability.enabled) {
+          this.setData({
+            loading: false,
+            loadFailed: false,
+            realtimeEnabled: false,
+            announcement: availability.announcement,
+            cards: [],
+          })
+          done?.()
+          return null
+        }
+        this.setData({ realtimeEnabled: true, announcement: '' })
+        return rideApi.listRides('PREBOOK')
+      })
+      .then((rides: Ride[] | null) => {
+        // 开关关闭时上一段已完成渲染；不能把 null 当作空列表覆盖公告页。
+        if (rides === null) {
+          return
+        }
         // 用户红线（2026-09-14）"不能拼的不要显示"：joinable=false（已满/状态不可加入）
         // 的单在数据层直接过滤、完全不渲染，而不是 wxml 里隐藏——避免渲染无意义节点，
         // 也保证 contactOwner/openDetail 只可能命中可加入的单。
@@ -111,6 +135,9 @@ Page({
   },
 
   goPublish() {
+    if (!this.data.realtimeEnabled) {
+      return
+    }
     wx.navigateTo({ url: '/pages/publish/index' })
   },
 })

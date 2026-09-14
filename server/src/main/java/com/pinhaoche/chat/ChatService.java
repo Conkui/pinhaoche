@@ -6,6 +6,7 @@ import com.pinhaoche.common.idempotency.IdempotencyService;
 import com.pinhaoche.common.util.TextSanitizer;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
+import com.pinhaoche.ride.RideService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,12 +37,14 @@ public class ChatService {
     private final ObjectMapper objectMapper;
     private final org.springframework.data.redis.core.StringRedisTemplate redis;
     private final org.springframework.transaction.support.TransactionTemplate txTemplate;
+    private final RideService rideService;
 
     public ChatService(ChatSessionRepository sessionRepository, ChatMessageRepository messageRepository,
                        OnlinePresence presence, IdempotencyService idempotency,
                        OutboxEventRepository outboxRepository, ObjectMapper objectMapper,
                        org.springframework.data.redis.core.StringRedisTemplate redis,
-                       org.springframework.transaction.support.TransactionTemplate txTemplate) {
+                       org.springframework.transaction.support.TransactionTemplate txTemplate,
+                       RideService rideService) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.presence = presence;
@@ -50,6 +53,7 @@ public class ChatService {
         this.objectMapper = objectMapper;
         this.redis = redis;
         this.txTemplate = txTemplate;
+        this.rideService = rideService;
     }
 
     // ---------- DTO ----------
@@ -77,6 +81,9 @@ public class ChatService {
         if (userId == peerUserId) {
             throw ApiException.validation("不能与自己建立会话");
         }
+        // 不能只依赖小程序按钮的 memberContacts 判断：请求可被伪造。
+        // Ride 模块是订单成员关系的唯一事实源，Chat 仅调用其 application service。
+        rideService.assertChatPeerAllowed(rideId, userId, peerUserId);
         long low = Math.min(userId, peerUserId);
         long high = Math.max(userId, peerUserId);
         ChatSession session = sessionRepository.findByRideIdAndUserLowIdAndUserHighId(rideId, low, high)

@@ -36,8 +36,15 @@ public class RideController {
     }
 
     @GetMapping("/rides/{rideId}")
-    public RideService.RideDto get(@PathVariable long rideId) {
-        return rideService.get(rideId);
+    public RideService.RideDto get(@PathVariable long rideId, jakarta.servlet.http.HttpServletRequest http) {
+        return rideService.getForViewer(rideId, userId(http));
+    }
+
+    /** RFC-012：联系人是 owner-only 附属资源，不能混入冻结 Ride 响应。 */
+    @GetMapping("/rides/{rideId}/member-contacts")
+    public List<RideService.MemberContactDto> memberContacts(@PathVariable long rideId,
+                                                              jakarta.servlet.http.HttpServletRequest http) {
+        return rideService.listMemberContacts(rideId, userId(http));
     }
 
     @PostMapping("/rides")

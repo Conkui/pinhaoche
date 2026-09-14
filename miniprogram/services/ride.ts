@@ -27,6 +27,14 @@ export interface Ride {
   waitingMinutes?: number | null
   version: number
   remark?: string | null
+  /** RFC-012：仅当前用户为车主时由服务端返回；不可据此推断其他订单成员。 */
+  memberContacts?: MemberContact[]
+}
+
+export interface MemberContact {
+  userId: number
+  nickname: string
+  avatar?: string | null
 }
 
 export interface CreateRideRequest {
@@ -55,6 +63,11 @@ export function listRides(view: 'PREBOOK' | 'BOOKED'): Promise<Ride[]> {
 
 export function getRide(rideId: number): Promise<Ride> {
   return request<Ride>(`/rides/${rideId}`)
+}
+
+/** RFC-012：仅订单发布者可读取的已加入拼友最小联系卡。 */
+export function listMemberContacts(rideId: number): Promise<MemberContact[]> {
+  return request<MemberContact[]>(`/rides/${rideId}/member-contacts`)
 }
 
 /** RFC-008：我发布的全部行程（含 CANCELLED/EXPIRED/CLOSED 终态），按创建时间倒序。 */

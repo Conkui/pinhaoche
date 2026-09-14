@@ -49,3 +49,24 @@
 .fab-safe-space {
   height: calc(240rpx + env(safe-area-inset-bottom));
 }
+
+/* 停用态只保留公告和刷新：服务关闭不是空数据，使用克制的信息层级避免误导成加载失败。 */
+.feature-closed {
+  margin: 120rpx 24rpx;
+  padding: 48rpx 36rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  text-align: left;
+}
+
+.feature-closed-title {
+  color: #1f2937;
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.feature-closed-announcement {
+  line-height: 1.7;
+  white-space: pre-wrap;
+}

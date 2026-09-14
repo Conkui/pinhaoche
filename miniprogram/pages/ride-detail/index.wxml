@@ -17,6 +17,18 @@
     <view class="meta" wx:if="{{ride.remark}}">备注：{{ride.remark}}</view>
   </view>
 
+  <!-- RFC-012：memberContacts 仅由服务端在车主查看其订单时返回，名单外用户没有入口或资料。 -->
+  <view wx:if="{{isMine && ride.memberContacts && ride.memberContacts.length}}" class="card" style="margin-top:20rpx">
+    <view class="route-line" style="font-size:30rpx">已加入的拼友</view>
+    <view wx:for="{{ride.memberContacts}}" wx:key="userId" class="meta" style="display:flex;align-items:center;justify-content:space-between;margin-top:16rpx">
+      <view style="display:flex;align-items:center">
+        <image wx:if="{{memberAvatarUrls[item.userId]}}" src="{{memberAvatarUrls[item.userId]}}" style="width:52rpx;height:52rpx;border-radius:50%;margin-right:14rpx" mode="aspectFill" />
+        <text>{{item.nickname}}</text>
+      </view>
+      <view class="btn-plain" data-member-id="{{item.userId}}" catchtap="contactMember">联系</view>
+    </view>
+  </view>
+
   <!-- 非 owner 且可加入：Primary Action = 加入 -->
   <view wx:if="{{joinable}}" style="padding:20rpx 24rpx 40rpx">
     <view class="btn-primary {{joining ? 'disabled' : ''}}" bindtap="onJoin">
