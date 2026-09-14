@@ -59,4 +59,47 @@ class FeatureAvailabilityServiceTest {
         assertFalse(result.enabled());
         assertEquals("维护中", result.announcement());
     }
+
+    @Test
+    void disabledFindFriendsBlocksOnlyPrebookGateWithItsOwnAnnouncement() {
+        RealtimeCarpoolSettingRepository realtimeRepository = mock(RealtimeCarpoolSettingRepository.class);
+        FindFriendsSettingRepository findFriendsRepository = mock(FindFriendsSettingRepository.class);
+        when(findFriendsRepository.findById((byte) 1)).thenReturn(Optional.of(
+                new FindFriendsSetting(false, "找拼友维护中", OffsetDateTime.now(ZoneOffset.UTC))));
+        FeatureAvailabilityService service = new FeatureAvailabilityService(realtimeRepository, findFriendsRepository);
+
+        ApiException error = assertThrows(ApiException.class, service::requireFindFriendsEnabled);
+
+        assertEquals(ErrorCode.FORBIDDEN, error.getCode());
+        assertEquals("找拼友维护中", error.getMessage());
+    }
+
+    @Test
+    void updateFindFriendsDoesNotWriteRealtimeSetting() {
+        RealtimeCarpoolSettingRepository realtimeRepository = mock(RealtimeCarpoolSettingRepository.class);
+        FindFriendsSettingRepository findFriendsRepository = mock(FindFriendsSettingRepository.class);
+        FindFriendsSetting setting = new FindFriendsSetting(true, "旧公告", OffsetDateTime.now(ZoneOffset.UTC));
+        when(findFriendsRepository.findById((byte) 1)).thenReturn(Optional.of(setting));
+        when(findFriendsRepository.save(any(FindFriendsSetting.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        FeatureAvailabilityService service = new FeatureAvailabilityService(realtimeRepository, findFriendsRepository);
+
+        var result = service.updateFindFriends(false, "找拼友暂停");
+
+        assertFalse(result.enabled());
+        assertEquals("找拼友暂停", result.announcement());
+    }
+
+    @Test
+    void missingRowsUseDifferentAnnouncementsForTheTwoFeatures() {
+        RealtimeCarpoolSettingRepository realtimeRepository = mock(RealtimeCarpoolSettingRepository.class);
+        FindFriendsSettingRepository findFriendsRepository = mock(FindFriendsSettingRepository.class);
+        when(realtimeRepository.findById((byte) 1)).thenReturn(Optional.empty());
+        when(findFriendsRepository.findById((byte) 1)).thenReturn(Optional.empty());
+        FeatureAvailabilityService service = new FeatureAvailabilityService(realtimeRepository, findFriendsRepository);
+
+        assertEquals(FeatureAvailabilityService.DEFAULT_REALTIME_ANNOUNCEMENT,
+                service.readRealtimeCarpool().announcement());
+        assertEquals(FeatureAvailabilityService.DEFAULT_FIND_FRIENDS_ANNOUNCEMENT,
+                service.readFindFriends().announcement());
+    }
 }

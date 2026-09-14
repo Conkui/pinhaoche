@@ -15,7 +15,8 @@ import java.time.ZoneOffset;
 @Service
 public class FeatureAvailabilityService {
 
-    static final String DEFAULT_ANNOUNCEMENT = "实时拼功能暂未开启，请留意后续公告。";
+    static final String DEFAULT_REALTIME_ANNOUNCEMENT = "实时拼功能暂未开启，请留意后续公告。";
+    static final String DEFAULT_FIND_FRIENDS_ANNOUNCEMENT = "找拼友功能暂未开启，请留意后续公告。";
     static final int ANNOUNCEMENT_MAX = 500;
     private static final byte SINGLETON_ID = 1;
 
@@ -67,7 +68,7 @@ public class FeatureAvailabilityService {
     /** 管理端更新。关闭时公告必须非空，防止用户只看到无解释的不可用页面。 */
     @Transactional
     public RealtimeCarpoolAvailability updateRealtimeCarpool(boolean enabled, String announcement) {
-        String cleaned = cleanAnnouncement(enabled, announcement, "实时拼");
+        String cleaned = cleanAnnouncement(enabled, announcement, "实时拼", DEFAULT_REALTIME_ANNOUNCEMENT);
         RealtimeCarpoolSetting setting = realtimeSetting();
         setting.update(enabled, cleaned, now());
         return toDto(realtimeRepository.save(setting));
@@ -76,19 +77,19 @@ public class FeatureAvailabilityService {
     /** 管理端更新找拼友开关；公告仅影响找拼友公告页。 */
     @Transactional
     public RealtimeCarpoolAvailability updateFindFriends(boolean enabled, String announcement) {
-        String cleaned = cleanAnnouncement(enabled, announcement, "找拼友");
+        String cleaned = cleanAnnouncement(enabled, announcement, "找拼友", DEFAULT_FIND_FRIENDS_ANNOUNCEMENT);
         FindFriendsSetting setting = findFriendsSetting();
         setting.update(enabled, cleaned, now());
         return toDto(findFriendsRepository.save(setting));
     }
 
-    private static String cleanAnnouncement(boolean enabled, String announcement, String featureName) {
+    private static String cleanAnnouncement(boolean enabled, String announcement, String featureName, String defaultAnnouncement) {
         String cleaned = TextSanitizer.clean(announcement);
         if (cleaned == null || cleaned.isBlank()) {
             if (!enabled) {
                 throw ApiException.validation("停用%s时必须填写公告".formatted(featureName));
             }
-            return DEFAULT_ANNOUNCEMENT;
+            return defaultAnnouncement;
         }
         if (cleaned.length() > ANNOUNCEMENT_MAX) {
             throw ApiException.validation("公告最长 %d 个字符".formatted(ANNOUNCEMENT_MAX));
@@ -100,12 +101,12 @@ public class FeatureAvailabilityService {
         // 迁移会预置唯一行；仅为手工清库/旧环境提供安全默认值。这里不落库，
         // 因为 readRealtimeCarpool 是只读事务；下一次管理端保存会把该默认值持久化。
         return realtimeRepository.findById(SINGLETON_ID)
-                .orElseGet(() -> new RealtimeCarpoolSetting(true, DEFAULT_ANNOUNCEMENT, now()));
+                .orElseGet(() -> new RealtimeCarpoolSetting(true, DEFAULT_REALTIME_ANNOUNCEMENT, now()));
     }
 
     private FindFriendsSetting findFriendsSetting() {
         return findFriendsRepository.findById(SINGLETON_ID)
-                .orElseGet(() -> new FindFriendsSetting(true, DEFAULT_ANNOUNCEMENT, now()));
+                .orElseGet(() -> new FindFriendsSetting(true, DEFAULT_FIND_FRIENDS_ANNOUNCEMENT, now()));
     }
 
     private static RealtimeCarpoolAvailability toDto(RealtimeCarpoolSetting setting) {

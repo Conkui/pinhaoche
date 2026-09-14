@@ -254,11 +254,17 @@
         <select id="rideStatusFilter"></select>
         <button class="btn btn-sm" id="ridesRefreshBtn">刷新</button>
       </div>
+      <div class="feature-switch-row" style="padding:0 18px 14px">
+        <label><input type="checkbox" id="selectVisibleRides"> 全选当前页</label>
+        <span class="muted" id="selectedRideCount">已选择 0 条（最多 100 条）</span>
+        <div class="spacer"></div>
+        <button class="btn btn-sm btn-danger" id="bulkDeleteRidesBtn" disabled>批量删除已选</button>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>ID</th><th>路线</th><th>车主ID</th><th>状态</th>
+              <th><input type="checkbox" id="selectAllRides" aria-label="选择当前页全部拼车单"></th><th>ID</th><th>路线</th><th>车主ID</th><th>状态</th>
               <th>人数</th><th>车牌</th><th>出发时间</th><th>操作</th>
             </tr>
           </thead>
@@ -318,11 +324,23 @@
         <input id="realtimeEnabledInput" class="feature-switch" type="checkbox" role="switch" aria-describedby="realtimeSwitchHint">
         <label for="realtimeEnabledInput" id="realtimeSwitchLabel" class="feature-state">加载中…</label>
       </div>
-      <p id="realtimeSwitchHint" class="muted" style="margin-bottom:16px">关闭后，小程序“找拼友”页会替换为公告页；重新开启后立即恢复。</p>
+      <p id="realtimeSwitchHint" class="muted" style="margin-bottom:16px">控制“我已打上车，发布行程”。关闭后该入口与提交会被公告拦截；不影响“找拼友”。</p>
       <label for="realtimeAnnouncementInput" style="display:block;font-size:13px;color:var(--text-2);margin-bottom:8px">停用公告（关闭时必填，最多 500 字）</label>
       <textarea id="realtimeAnnouncementInput" maxlength="500" placeholder="例如：实时拼功能维护中，预计今晚恢复。"></textarea>
       <div class="muted" id="realtimeAnnouncementCount" style="text-align:right;margin-top:6px">0 / 500</div>
       <div style="margin-top:16px"><button class="btn btn-primary" id="saveRealtimeFeatureBtn">保存设置</button></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>找拼友</h3></div>
+      <div class="feature-switch-row">
+        <input id="findFriendsEnabledInput" class="feature-switch" type="checkbox" role="switch" aria-describedby="findFriendsSwitchHint">
+        <label for="findFriendsEnabledInput" id="findFriendsSwitchLabel" class="feature-state">加载中…</label>
+      </div>
+      <p id="findFriendsSwitchHint" class="muted" style="margin-bottom:16px">控制预打车的列表、发布和加入。关闭后“找拼友”页显示下方公告；不影响“我已打上车”。</p>
+      <label for="findFriendsAnnouncementInput" style="display:block;font-size:13px;color:var(--text-2);margin-bottom:8px">停用公告（关闭时必填，最多 500 字）</label>
+      <textarea id="findFriendsAnnouncementInput" maxlength="500" placeholder="例如：找拼友功能维护中，预计今晚恢复。"></textarea>
+      <div class="muted" id="findFriendsAnnouncementCount" style="text-align:right;margin-top:6px">0 / 500</div>
+      <div style="margin-top:16px"><button class="btn btn-primary" id="saveFindFriendsFeatureBtn">保存设置</button></div>
     </div>
   </section>
 </main>
@@ -345,7 +363,9 @@
     feedback: { page: 0, size: 20, total: 0 },
     rides: { page: 0, size: 20, total: 0, status: 'ALL' },
     places: [], // 当前列表顺序（用于上移/下移后生成 orderedIds）
-    realtimeFeature: null
+    realtimeFeature: null,
+    findFriendsFeature: null,
+    selectedRideIds: {}
   };
 
   // 拼车单 9 个状态（ALL + 9 = 下拉框 10 项）及徽标样式映射
@@ -517,7 +537,7 @@
     else if (tab === 'feedback') loadFeedback();
     else if (tab === 'rides') loadRides();
     else if (tab === 'places') loadPlaces();
-    else if (tab === 'features') loadRealtimeFeature();
+    else if (tab === 'features') loadFeatures();
   }
 
   /* ============================================================
@@ -694,7 +714,7 @@
       .catch(function (e) {
         showError('rides', e.message);
         document.getElementById('ridesBody').innerHTML =
-          '<tr><td colspan="8" class="empty">加载失败</td></tr>';
+          '<tr><td colspan="9" class="empty">加载失败</td></tr>';
         document.getElementById('ridesPager').innerHTML = '';
       })
       .finally(function () { card.classList.remove('loading'); });
@@ -708,7 +728,7 @@
   function renderRides(items) {
     var body = document.getElementById('ridesBody');
     if (!items || items.length === 0) {
-      body.innerHTML = '<tr><td colspan="8" class="empty">暂无拼车单</td></tr>';
+      body.innerHTML = '<tr><td colspan="9" class="empty">暂无拼车单</td></tr>';
       return;
     }
     var html = '';
@@ -717,6 +737,7 @@
       var origin = r.origin && r.origin.text ? r.origin.text : '-';
       var dest = r.destination && r.destination.text ? r.destination.text : '-';
       html += '<tr>' +
+        '<td><input type="checkbox" class="ride-select" data-ride-id="' + escapeHtml(String(r.id)) + '"' + (state.selectedRideIds[r.id] ? ' checked' : '') + ' aria-label="选择拼车单 ' + escapeHtml(String(r.id)) + '"></td>' +
         '<td class="num">' + escapeHtml(formatNumber(r.id)) + '</td>' +
         '<td class="wrap">' + escapeHtml(origin) + ' <span class="muted">→</span> ' + escapeHtml(dest) + '</td>' +
         '<td class="num">' + escapeHtml(formatNumber(r.ownerId)) + '</td>' +
@@ -728,12 +749,67 @@
         '</tr>';
     }
     body.innerHTML = html;
+    var selectBoxes = body.querySelectorAll('.ride-select');
+    for (var k = 0; k < selectBoxes.length; k++) {
+      selectBoxes[k].addEventListener('change', function () {
+        var id = Number(this.getAttribute('data-ride-id'));
+        if (this.checked) state.selectedRideIds[id] = true;
+        else delete state.selectedRideIds[id];
+        updateRideSelectionControls();
+      });
+    }
     var deleteButtons = body.querySelectorAll('[data-ride-delete]');
     for (var j = 0; j < deleteButtons.length; j++) {
       deleteButtons[j].addEventListener('click', function () {
         deleteRide(Number(this.getAttribute('data-ride-delete')));
       });
     }
+    updateRideSelectionControls();
+  }
+
+  function visibleRideIds() {
+    var boxes = document.querySelectorAll('#ridesBody .ride-select');
+    var ids = [];
+    for (var i = 0; i < boxes.length; i++) ids.push(Number(boxes[i].getAttribute('data-ride-id')));
+    return ids.filter(function (id) { return Number.isFinite(id) && id > 0; });
+  }
+
+  function updateRideSelectionControls() {
+    var ids = Object.keys(state.selectedRideIds);
+    var count = ids.length;
+    document.getElementById('selectedRideCount').textContent = '已选择 ' + count + ' 条（最多 100 条）';
+    document.getElementById('bulkDeleteRidesBtn').disabled = count === 0 || count > 100;
+    var visible = visibleRideIds();
+    var allVisible = visible.length > 0 && visible.every(function (id) { return !!state.selectedRideIds[id]; });
+    document.getElementById('selectAllRides').checked = allVisible;
+    document.getElementById('selectVisibleRides').checked = allVisible;
+  }
+
+  function setVisibleRideSelection(selected) {
+    var ids = visibleRideIds();
+    for (var i = 0; i < ids.length; i++) {
+      if (selected) state.selectedRideIds[ids[i]] = true;
+      else delete state.selectedRideIds[ids[i]];
+    }
+    var boxes = document.querySelectorAll('#ridesBody .ride-select');
+    for (var j = 0; j < boxes.length; j++) boxes[j].checked = !!state.selectedRideIds[Number(boxes[j].getAttribute('data-ride-id'))];
+    updateRideSelectionControls();
+  }
+
+  function bulkDeleteRides() {
+    var ids = Object.keys(state.selectedRideIds).map(Number).filter(function (id) { return Number.isFinite(id) && id > 0; });
+    if (ids.length === 0 || ids.length > 100) { showToast('请选择 1 至 100 条拼车单', 'error'); return; }
+    if (!window.confirm('确认批量删除 ' + ids.length + ' 条拼车单？删除会被审计且不可撤销。')) return;
+    var button = document.getElementById('bulkDeleteRidesBtn');
+    button.disabled = true;
+    api('/api/v1/admin/rides/bulk-suppress', { method: 'POST', body: { rideIds: ids } })
+      .then(function (result) {
+        state.selectedRideIds = {};
+        showToast('批量删除完成：新增 ' + Number(result.newlySuppressed || 0) + ' 条，已删除 ' + Number(result.alreadySuppressed || 0) + ' 条', 'success');
+        loadRides();
+      })
+      .catch(function (e) { showError('rides', e.message); })
+      .finally(function () { updateRideSelectionControls(); });
   }
 
   function deleteRide(rideId) {
@@ -862,49 +938,67 @@
   /* ============================================================
    * 功能开关：只有管理员明确保存才改变线上状态，checkbox 的瞬时切换不会误关服务。
    * ============================================================ */
-  function updateRealtimeFeatureForm(feature) {
-    var enabledInput = document.getElementById('realtimeEnabledInput');
-    var announcementInput = document.getElementById('realtimeAnnouncementInput');
+  function updateFeatureForm(prefix, feature) {
+    var enabledInput = document.getElementById(prefix + 'EnabledInput');
+    var announcementInput = document.getElementById(prefix + 'AnnouncementInput');
     enabledInput.checked = !!feature.enabled;
     announcementInput.value = feature.announcement || '';
-    document.getElementById('realtimeSwitchLabel').textContent = feature.enabled ? '已开启' : '已关闭';
-    updateRealtimeAnnouncementCount();
+    document.getElementById(prefix + 'SwitchLabel').textContent = feature.enabled ? '已开启' : '已关闭';
+    updateAnnouncementCount(prefix);
   }
 
-  function updateRealtimeAnnouncementCount() {
-    var value = document.getElementById('realtimeAnnouncementInput').value || '';
-    document.getElementById('realtimeAnnouncementCount').textContent = value.length + ' / 500';
+  function updateAnnouncementCount(prefix) {
+    var value = document.getElementById(prefix + 'AnnouncementInput').value || '';
+    document.getElementById(prefix + 'AnnouncementCount').textContent = value.length + ' / 500';
   }
 
   function loadRealtimeFeature() {
     clearError('features');
     return api('/api/v1/admin/features/realtime-carpool').then(function (feature) {
       state.realtimeFeature = feature;
-      updateRealtimeFeatureForm(feature);
+      updateFeatureForm('realtime', feature);
     }).catch(function (e) {
       showError('features', e.message);
     });
   }
 
-  function saveRealtimeFeature() {
-    var enabled = document.getElementById('realtimeEnabledInput').checked;
-    var announcement = document.getElementById('realtimeAnnouncementInput').value.trim();
+  function loadFindFriendsFeature() {
+    return api('/api/v1/admin/features/find-friends').then(function (feature) {
+      state.findFriendsFeature = feature;
+      updateFeatureForm('findFriends', feature);
+    }).catch(function (e) {
+      showError('features', e.message);
+    });
+  }
+
+  function loadFeatures() {
+    clearError('features');
+    return Promise.all([loadRealtimeFeature(), loadFindFriendsFeature()]);
+  }
+
+  function saveFeature(prefix, path, displayName) {
+    var enabled = document.getElementById(prefix + 'EnabledInput').checked;
+    var announcement = document.getElementById(prefix + 'AnnouncementInput').value.trim();
     if (!enabled && !announcement) {
-      showToast('关闭实时拼时必须填写公告', 'error');
+      showToast('关闭' + displayName + '时必须填写公告', 'error');
       return;
     }
-    var button = document.getElementById('saveRealtimeFeatureBtn');
+    var button = document.getElementById('save' + (prefix === 'realtime' ? 'Realtime' : 'FindFriends') + 'FeatureBtn');
     button.disabled = true;
-    api('/api/v1/admin/features/realtime-carpool', {
+    api(path, {
       method: 'PUT', body: { enabled: enabled, announcement: announcement }
     }).then(function (feature) {
-      state.realtimeFeature = feature;
-      updateRealtimeFeatureForm(feature);
-      showToast(feature.enabled ? '实时拼已开启' : '实时拼已关闭，公告已生效', 'success');
+      if (prefix === 'realtime') state.realtimeFeature = feature;
+      else state.findFriendsFeature = feature;
+      updateFeatureForm(prefix, feature);
+      showToast(feature.enabled ? displayName + '已开启' : displayName + '已关闭，公告已生效', 'success');
     }).catch(function (e) {
       showToast(e.message, 'error');
     }).finally(function () { button.disabled = false; });
   }
+
+  function saveRealtimeFeature() { saveFeature('realtime', '/api/v1/admin/features/realtime-carpool', '实时拼'); }
+  function saveFindFriendsFeature() { saveFeature('findFriends', '/api/v1/admin/features/find-friends', '找拼友'); }
 
   /* ============================================================
    * 分页器渲染（反馈 / 拼车单共用）
@@ -981,6 +1075,9 @@
 
     // 拼车管理
     document.getElementById('ridesRefreshBtn').addEventListener('click', loadRides);
+    document.getElementById('selectAllRides').addEventListener('change', function (e) { setVisibleRideSelection(e.target.checked); });
+    document.getElementById('selectVisibleRides').addEventListener('change', function (e) { setVisibleRideSelection(e.target.checked); });
+    document.getElementById('bulkDeleteRidesBtn').addEventListener('click', bulkDeleteRides);
 
     // 地点管理（事件委托：表格内所有操作按钮）
     document.getElementById('addPlaceBtn').addEventListener('click', addPlace);
@@ -1001,8 +1098,13 @@
     document.getElementById('realtimeEnabledInput').addEventListener('change', function (e) {
       document.getElementById('realtimeSwitchLabel').textContent = e.target.checked ? '将开启（未保存）' : '将关闭（未保存）';
     });
-    document.getElementById('realtimeAnnouncementInput').addEventListener('input', updateRealtimeAnnouncementCount);
+    document.getElementById('realtimeAnnouncementInput').addEventListener('input', function () { updateAnnouncementCount('realtime'); });
     document.getElementById('saveRealtimeFeatureBtn').addEventListener('click', saveRealtimeFeature);
+    document.getElementById('findFriendsEnabledInput').addEventListener('change', function (e) {
+      document.getElementById('findFriendsSwitchLabel').textContent = e.target.checked ? '将开启（未保存）' : '将关闭（未保存）';
+    });
+    document.getElementById('findFriendsAnnouncementInput').addEventListener('input', function () { updateAnnouncementCount('findFriends'); });
+    document.getElementById('saveFindFriendsFeatureBtn').addEventListener('click', saveFindFriendsFeature);
   }
 
   function init() {
