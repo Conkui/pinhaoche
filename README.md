@@ -50,12 +50,12 @@
 ## 快速开始（TL;DR）
 
 ```bash
-cp .env.example .env                 # 默认即 mock 模式，无需任何微信凭证
+cp .env.example .env                 # 填完所有 REPLACE_WITH_RANDOM_* 后再启动；mock 无需微信凭证
 docker compose up -d --build         # 起 MySQL/Redis/RabbitMQ/后端
 # 后端存活探针
-curl -s -o /dev/null -w "%{http_code}\n" -H "X-Admin-Key: dev-admin-key" \
+curl -s -o /dev/null -w "%{http_code}\n" -H "X-Admin-Key: <.env 中的 ADMIN_KEY>" \
   http://127.0.0.1:8080/api/v1/admin/places     # 期望 200
-# 后台管理页：浏览器打开 http://127.0.0.1:8080/admin/index.html （填 dev-admin-key）
+# 后台管理页：浏览器打开 http://127.0.0.1:8080/admin/index.html （填 .env 中的 ADMIN_KEY）
 # 小程序：微信开发者工具导入 E:\coTesx\miniprogram（不是仓库根目录），勾选"不校验合法域名"后编译
 ```
 

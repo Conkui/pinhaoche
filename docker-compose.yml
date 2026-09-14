@@ -2,34 +2,43 @@ services:
   mysql:
     image: mysql:8.4
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: pinhaoche
-      MYSQL_USER: pinhaoche
-      MYSQL_PASSWORD: pinhaoche
+      # 凭证必须由未提交的 .env 提供；缺失时 compose 直接失败，避免以公开默认密码启动。
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:?请先在 .env 设置 MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE:?请先在 .env 设置 MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER:?请先在 .env 设置 MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:?请先在 .env 设置 MYSQL_PASSWORD}"
       TZ: UTC
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
       # 宿主机 3306 被占用、13306 落在 Windows 排除段，改用 23306；容器内部仍 3306
-      - "23306:3306"
+      - "127.0.0.1:23306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      # $$ 交给容器内 shell 展开，避免 Compose 在宿主机读取/打印 root 密码。
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\""]
       interval: 5s
       retries: 20
 
   redis:
     image: redis:7-alpine
+    environment:
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?请先在 .env 设置 REDIS_PASSWORD}"
+    # Redis 不会自行展开环境变量；经 shell 展开后再 exec，密码不会出现在 compose 文件中。
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\""]
     ports:
       # 宿主机 6379 落在 Windows 排除端口段（6336-6435），改用 16379；容器内部仍 6379
-      - "16379:6379"
+      - "127.0.0.1:16379:6379"
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER:?请先在 .env 设置 RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD:?请先在 .env 设置 RABBITMQ_PASSWORD}"
     ports:
       # 宿主机 5672/5673 落在 Windows 排除端口段（5636-6635），改用 25672；容器内部仍 5672
-      - "25672:5672"
-      - "15672:15672"
+      - "127.0.0.1:25672:5672"
+      - "127.0.0.1:15672:15672"
 
   server:
     build: ./server
@@ -41,21 +50,25 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: pinhaoche
-      DB_USER: pinhaoche
-      DB_PASSWORD: pinhaoche
+      DB_NAME: "${MYSQL_DATABASE:?请先在 .env 设置 MYSQL_DATABASE}"
+      DB_USER: "${MYSQL_USER:?请先在 .env 设置 MYSQL_USER}"
+      DB_PASSWORD: "${MYSQL_PASSWORD:?请先在 .env 设置 MYSQL_PASSWORD}"
       REDIS_HOST: redis
+      REDIS_PASSWORD: "${REDIS_PASSWORD:?请先在 .env 设置 REDIS_PASSWORD}"
       RABBITMQ_HOST: rabbitmq
-      # 语法 "${VAR:-默认值}"：未定义 .env 或该行被注释时回落到默认值 = 本地 mock 联调，
-      # 保证"全新机器 clone 下来直接 up 就能跑"，不要求先建 .env。
+      RABBITMQ_USER: "${RABBITMQ_USER:?请先在 .env 设置 RABBITMQ_USER}"
+      RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:?请先在 .env 设置 RABBITMQ_PASSWORD}"
+      # 微信 mock 仍可使用默认值；基础设施与管理密钥则必须先由 .env 提供，
+      # 全新机器应先复制 .env.example 并替换所有 REPLACE_WITH_RANDOM_* 占位符。
       WECHAT_MOCK: "${WECHAT_MOCK:-true}"
       WECHAT_APPID: "${WECHAT_APPID:-}"
       WECHAT_SECRET: "${WECHAT_SECRET:-}"
-      ADMIN_KEY: "${ADMIN_KEY:-dev-admin-key}"
+      ADMIN_KEY: "${ADMIN_KEY:?请先在 .env 设置 ADMIN_KEY}"
       # 头像上传落盘目录（RFC-011），需与下面 volumes 的挂载点一致
       UPLOAD_DIR: "${UPLOAD_DIR:-./data/uploads}"
     ports:
-      - "8080:8080"
+      # 默认仅本机；仅当该可信组网地址确实配置在本机网卡上，才设 SERVER_BIND_ADDRESS 为该地址。
+      - "${SERVER_BIND_ADDRESS:-127.0.0.1}:${SERVER_PORT:-8080}:8080"
     volumes:
       # 上传的头像持久化：不挂卷的话文件写在容器可写层，`up --build` 重建容器即全部丢失，
       # 表现为"我的"页头像全 404（库里只剩失效路径）。绑定挂载到宿主机 ./data/uploads 便于直接查看文件。

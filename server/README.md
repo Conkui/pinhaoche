@@ -26,12 +26,13 @@
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `localhost` / `3306` / `pinhaoche` / `pinhaoche` / `pinhaoche` | MySQL 连接（compose 内 `DB_HOST=mysql`） |
-| `REDIS_HOST` / `RABBITMQ_HOST` | `localhost` | cache / 事件总线（compose 内为服务名） |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `localhost` / `3306` / `pinhaoche` / `<required>` / `<required>` | MySQL 连接（compose 内 `DB_HOST=mysql`） |
+| `REDIS_HOST` / `REDIS_PASSWORD` | `localhost` / `<required>` | cache（compose 内为服务名） |
+| `RABBITMQ_HOST` / `RABBITMQ_USER` / `RABBITMQ_PASSWORD` | `localhost` / `guest` / `<required>` | 事件总线（compose 内为服务名） |
 | `WECHAT_MOCK` | `true` | **mock＝把登录 code 直接当 openid**（零依赖联调）；`false`＝调微信 `jscode2session` 换真实 openid |
 | `WECHAT_APPID` | 空 | 小程序 appid（本项目为 `wxe956226c7e7fa726`） |
 | `WECHAT_SECRET` | 空 | 小程序 AppSecret，**真实模式必填**；泄露需立即在公众平台重置 |
-| `ADMIN_KEY` | `dev-admin-key` | 管理端 `X-Admin-Key` 共享密钥，**生产必须更换** |
+| `ADMIN_KEY` | `<required>` | 管理端 `X-Admin-Key` 独立强随机共享密钥，禁止提交 |
 | `UPLOAD_DIR` | `./data/uploads` | 头像落盘目录（容器内相对 `/app`，compose 绑定挂载到宿主机 `./data/uploads`） |
 | `TOKEN_TTL_HOURS` | `72` | token 有效期（Redis） |
 
@@ -44,6 +45,7 @@
 ```bash
 # 根目录：一键起 MySQL/Redis/RabbitMQ/后端（配置从根目录 .env 读，模板 .env.example）
 cp .env.example .env
+# 先替换 .env 中所有 REPLACE_WITH_RANDOM_* 占位符
 docker compose up -d --build
 
 # 仅构建与测试（宿主机无 JDK 21 也可，用容器；Git Bash 下两个参数缺一不可）
@@ -55,7 +57,7 @@ MSYS_NO_PATHCONV=1 docker run --rm \
 
 - `MSYS_NO_PATHCONV=1` 关闭 Git Bash 的 POSIX→Windows 路径转换（否则 `-w /build` 被改写）；
   `$(pwd -W)` 让挂载路径输出 Windows 原生形式（`/e/...` 形式 Docker 无法挂载）。详见 `docs/RUNBOOK.md` 第 7 节。
-- 管理端：请求头 `X-Admin-Key: dev-admin-key`（生产必须经环境变量覆盖 + HTTPS + IP 白名单）。
+- 管理端：请求头 `X-Admin-Key: <.env 中的 ADMIN_KEY>`（HTTPS + IP 白名单，且密钥不提交）。
 - 数据库结构只经 Flyway（`src/main/resources/db/migration`，源自 `db/migration/V1__init.sql`，冻结）。
 
 ## 新增接口（RFC-011）

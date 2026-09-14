@@ -36,7 +36,7 @@ docker compose version    # 期望 Docker Compose version v2.x
 git clone <仓库地址> coTesx
 cd coTesx
 
-# 2) 生成环境变量文件（默认即【A 本地联调】，不需要微信 AppSecret）
+# 2) 生成环境变量文件，并把所有 REPLACE_WITH_RANDOM_* 值替换为各不相同的随机密码
 cp .env.example .env
 
 # 3) 一键构建并启动全部 4 个容器（首次构建需下载镜像 + Maven 依赖，约 3~8 分钟）
@@ -46,14 +46,30 @@ docker compose up -d --build
 docker compose ps
 ```
 
+在 PowerShell 中可为每一项密码分别执行下列命令（只使用十六进制字符，能安全写入 `.env`）：
+
+```powershell
+[Convert]::ToHexString((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+> 已有 MySQL 数据卷时，MySQL 镜像只会在**首次初始化**读取 `MYSQL_ROOT_PASSWORD` 和
+> `MYSQL_PASSWORD`。因此不要只改 `.env` 后就重启：先用当前凭证在维护窗口内执行账号密码轮换，
+> 再写入新 `.env` 并重建 `server`。如果这是可丢弃的本地预演数据，先明确备份需求后再执行
+> `docker compose down -v`，随后用新 `.env` 初始化；该命令会删除数据库数据，不能用于需保留数据的环境。
+
+> RabbitMQ 的 `RABBITMQ_DEFAULT_USER` / `RABBITMQ_DEFAULT_PASS` 同样只在首次初始化生效。已有
+> RabbitMQ 数据目录要轮换凭据，必须在维护窗口内先用旧管理员账号创建新随机管理员、更新 `.env` 后重建
+> `server`，确认 Outbox 消费正常后再删除旧账号；若本机 RabbitMQ 消息允许丢弃，才可停止该容器并删除其数据后
+> 用新 `.env` 初始化。不要只改 `.env` 后宣称 RabbitMQ 密码已轮换。
+
 `docker compose ps` 应看到 **4 个容器**处于运行状态（server 为 `Up`，mysql 为 `Up (healthy)`）：
 
 | 容器 | 宿主机端口 | 容器内端口 | 说明 |
 | --- | --- | --- | --- |
-| `mysql` | 23306 | 3306 | 业务事实源，`pinhaoche` 库 |
-| `redis` | 16379 | 6379 | token / 在线状态 / 未读数 / 通知冷却 |
-| `rabbitmq` | 25672 / 15672 | 5672 / 15672 | Outbox 事件消费；15672 是管理控制台（guest/guest） |
-| `server` | 8080 | 8080 | Spring Boot 后端 + 静态管理后台 |
+| `mysql` | `127.0.0.1:23306` | 3306 | 业务事实源，`pinhaoche` 库；仅本机 |
+| `redis` | `127.0.0.1:16379` | 6379 | token / 在线状态 / 未读数 / 通知冷却；仅本机且需要密码 |
+| `rabbitmq` | `127.0.0.1:25672` / `127.0.0.1:15672` | 5672 / 15672 | Outbox 事件消费与管理台；仅本机，凭证来自 `.env` |
+| `server` | `${SERVER_BIND_ADDRESS}:8080`（默认 `127.0.0.1:8080`） | 8080 | Spring Boot 后端 + 静态管理后台 |
 
 > 为什么端口不是默认值：宿主机 3306/5672/6379 常被本地已装的服务占用，或落在 Windows 的
 > TCP 排除端口段内。用 23306/25672/16379 可绕开，容器内部仍是标准端口（不影响代码）。
@@ -71,11 +87,11 @@ docker compose logs -f server
 
 ## 3. 验证后端活着
 
-用**管理端**接口做存活探针（它只需 `X-Admin-Key`，不依赖登录）：
+用**管理端**接口做存活探针（它只需 `.env` 中的 `ADMIN_KEY`，不依赖登录）：
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" \
-  -H "X-Admin-Key: dev-admin-key" \
+  -H "X-Admin-Key: <.env 中的 ADMIN_KEY>" \
   http://127.0.0.1:8080/api/v1/admin/places
 # 期望输出：200
 ```
@@ -96,7 +112,7 @@ curl -s -o /dev/null -w "%{http_code}\n" \
 http://127.0.0.1:8080/admin/index.html
 ```
 
-1. 页面顶部输入框填 `dev-admin-key`（即 `.env` 的 `ADMIN_KEY`），点「保存」；
+1. 页面顶部输入框填 `.env` 的 `ADMIN_KEY`，点「保存」；
 2. 四个 Tab 应正常出数据：**总览**（12 项标量指标 + 近 7 天趋势）、**反馈**（分页列表）、
    **拼车**（可按 status 过滤）、**地点**（预设地点增删改）。
 
@@ -122,7 +138,8 @@ http://127.0.0.1:8080/admin/index.html
 
 5. 点「编译」，底部四个 Tab 可切换：**实时拼 / 找拼友 / 消息 / 我的**。
 
-连接的是本机后端 `http://127.0.0.1:8080`，所以第 2 节的 compose 必须处于运行状态。
+默认连接的是本机后端 `http://127.0.0.1:8080`，所以第 2 节的 compose 必须处于运行状态。
+真机预演的组网地址与 `SERVER_ORIGIN` 配置见第 10 节。
 
 ---
 
@@ -168,8 +185,9 @@ docker compose exec server printenv WECHAT_MOCK
 
 ```bash
 # --default-character-set=utf8mb4 不能省：不加时中文昵称会显示成 ??（客户端字符集问题，不是入库乱码）
-docker compose exec mysql mysql -uroot -proot --default-character-set=utf8mb4 pinhaoche \
-  -e "select id,openid,nickname from app_user order by id desc limit 5"
+docker compose exec mysql sh -c \
+  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --default-character-set=utf8mb4 "$MYSQL_DATABASE" \
+  -e "select id,openid,nickname from app_user order by id desc limit 5"'
 # real 模式：openid 不是 mock_ 开头；mock 模式：openid 形如 mock_<dev code>
 ```
 
@@ -233,7 +251,7 @@ JPEG/PNG/GIF/WEBP，**显式拒绝 SVG**（SVG 可内嵌脚本，静态资源直
 
 | 现象 | 原因 | 解法 |
 | --- | --- | --- |
-| `docker compose up` 报端口被占用 / `bind: address already in use` | 宿主机 3306/5672/6379 被本地已装的 MySQL/RabbitMQ/Redis 占用，或端口落在 Windows 排除段（如 6336-6435、5636-6635） | 本项目已改用 23306/25672/16379 绕开；若仍冲突，改 `docker-compose.yml` 左侧宿主端口（冒号左边），容器内不要动 |
+| `docker compose up` 报端口被占用 / `bind: address already in use` | 宿主机 3306/5672/6379 被本地已装的 MySQL/RabbitMQ/Redis 占用，或端口落在 Windows 排除段（如 6336-6435、5636-6635） | 本项目已改用 23306/25672/16379 绕开；若仍冲突，改 `docker-compose.yml` 中端口的宿主机部分，容器内不要动。基础设施仍必须保持 `127.0.0.1` 绑定 |
 | 开发者工具打开就白屏 | 曾经的 `config/index.ts` 目录形式：工具 TS 模块加载不回退目录索引，`require('../config')` 解析失败 | 已拍平为单文件 `miniprogram/config.ts`；**不要再建 `config/` 目录**，`config` 必须保持单文件 |
 | 请求 `http://127.0.0.1:8080` 全部失败（`request:fail`） | 工具未勾选"不校验合法域名"（个人本地设置会覆盖 `project.config.json`） | 详情 → 本地设置 → 勾选"不校验合法域名、web-view（业务域名）、TLS 版本以及 HTTPS 证书" |
 | 登录 401 / 提示「微信登录失败」 | ① AppSecret 填错或被重置；② AppID 与 AppSecret 不属于同一个小程序；③ 两边模式不匹配：`WECHAT_MOCK=true` 却 `MODE='real'`（后端拿真实 code 当 openid 但没配 secret），或 `WECHAT_MOCK=false` 却 `MODE='mock'`（后端拿 dev code 去微信换 openid，微信报 `invalid code`） | 依次核对：`docker compose exec server printenv WECHAT_MOCK`、`.env` 的 appid/secret、`config.ts` 的 `MODE`；**两边必须同时切**。改完记得 `docker compose up -d --build server` 并重新编译小程序 |
@@ -249,7 +267,34 @@ JPEG/PNG/GIF/WEBP，**显式拒绝 SVG**（SVG 可内嵌脚本，静态资源直
 
 ---
 
-## 10. 真机预览 / 上线的硬约束（不要自欺欺人）
+## 10. 真机预览、组网预演与上线的硬约束
+
+### 10.1 本次可信组网预演（192.168.188.1，以客户端实际虚拟地址为准）
+
+`192.168.188.1` 是本机当前可信组网的虚拟地址（本机实际前缀以组网客户端显示为准），不是可直接在互联网访问的公网 IP。它只适合
+已加入同一可信组网的手机/电脑访问；外网用户、微信服务器和未入网设备无法通过它连到本机。
+
+本机要让组网内的手机访问，编辑未提交的 `.env`：
+
+```dotenv
+SERVER_BIND_ADDRESS=192.168.188.1
+SERVER_PORT=8080
+```
+
+然后重建应用容器：
+
+```bash
+docker compose up -d --build server
+```
+
+仅 `server` 可监听该组网地址；MySQL、Redis、RabbitMQ 必须继续是 `127.0.0.1`，**不要**把它们交给内网穿透或组网映射。
+组网内连通性地址是 `http://192.168.188.1:8080`，可在手机浏览器先验证；它不适合作为真机小程序的最终
+`SERVER_ORIGIN`，因为真机/体验版仍需要微信后台认可的 HTTPS/WSS 域名。
+
+如果你的组网产品为未来服务器分配了一个可路由的虚拟 IP，也按同一原则使用：服务器只监听该虚拟 IP 或
+`127.0.0.1`，由 HTTPS 反向代理接收流量；绝不暴露数据库、Redis 或 RabbitMQ。
+
+### 10.2 微信真机/体验版与公网映射
 
 **本机的 `http://127.0.0.1:8080` 只在「微信开发者工具 + 勾选不校验合法域名」下可用。**
 它不是"上线可用"的形态，理由如下：
@@ -263,7 +308,7 @@ JPEG/PNG/GIF/WEBP，**显式拒绝 SVG**（SVG 可内嵌脚本，静态资源直
 2. 微信公众平台 →「开发管理」→「开发设置」→「服务器域名」配置：
    - **request 合法域名**：`https://<你的域名>`（登录、业务接口、`/files/**` 头像一律走它）
    - **socket 合法域名**：`wss://<你的域名>`（聊天 WebSocket `/ws/v1/chat`，必须是 `wss://` 而不是 `ws://`）
-3. 小程序 `config.ts` 只需把 **`SERVER_ORIGIN`** 换成该 HTTPS 域名（`BASE_URL`/`WS_URL` 由它派生，
+3. 小程序 `config.ts` 只需把 **`SERVER_ORIGIN`** 换成该 HTTPS 域名或合规内网穿透 HTTPS 域名（`BASE_URL`/`WS_URL` 由它派生，
    `ws://` 自动变 `wss://`）并重新上传代码；
 4. Nginx 必须落实 **RFC-010 的覆盖式 XFF 约束**（否则登录限流可被伪造 XFF 绕过）：
    由 Nginx 覆盖写入 `X-Forwarded-For`，不信任客户端传入的同名头；
@@ -272,7 +317,7 @@ JPEG/PNG/GIF/WEBP，**显式拒绝 SVG**（SVG 可内嵌脚本，静态资源直
 6. `/files/**` 是**免鉴权**静态资源（小程序 `<image src>` 无法携带 `Authorization`，要求 token 则头像永远 404），
    且不受 RFC-010 限流覆盖——这是已知权衡（文件名是 UUID、不可枚举，头像是用户主动公开的信息）。
    不要为了"看起来更安全"给它加 token 校验，那会直接打死头像显示；如需更严再叠加 Referer/域名校验；
-7. 更换 `ADMIN_KEY`（默认 `dev-admin-key` 等于公开密码），管理后台加 IP 白名单或只在内网暴露；
+7. 管理后台加 IP 白名单或只在内网暴露；`ADMIN_KEY` 必须为未提交 `.env` 中独立的强随机值；
 8. `MODE` 必须是 `'real'`（`DEV_MOCK_LOGIN` 由它派生，无需单独改；保持 mock 等于线上所有人都登录成同一个 dev 账号）；
 9. 上传目录改为持久化对象存储或挂载网络盘（当前为本地盘，多实例部署或容器无卷重建会丢头像）。
 

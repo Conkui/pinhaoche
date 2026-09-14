@@ -15,6 +15,6 @@
 - 不修改冻结契约（openapi 为小程序客户端契约，管理端沿用 RFC-005 先例不入 openapi）；数据库无结构变更。
 
 ## 安全说明
-静态 HTML 本身公开（无数据），所有数据接口必须 `X-Admin-Key`；密钥由页面登录框输入、存 localStorage。生产必须更换默认 `dev-admin-key` 并建议加 HTTPS + IP 白名单（记入 Known Issues）。
+静态 HTML 本身公开（无数据），所有数据接口必须 `X-Admin-Key`；密钥由页面登录框输入、存 localStorage。密钥必须来自未提交 `.env` 的独立强随机值；历史默认密钥已移除，仍建议加 HTTPS + IP 白名单（记入 Known Issues）。
 
 状态：已由 Integration 评审接受（用户 2026-09-14 指令）。

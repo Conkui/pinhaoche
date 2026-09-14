@@ -1,6 +1,7 @@
 #!/bin/bash
 # 拼好车 V1 验收 B 清单模拟调用（需 docker compose 环境已启动）
 B=http://127.0.0.1:8080/api/v1
+ADMIN_KEY="${ADMIN_KEY:?请从 .env 导出 ADMIN_KEY 后再运行验收脚本}"
 cd "$(dirname "$0")"
 J() { node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{const o=JSON.parse(d);const v=eval('o'+process.argv[1]);console.log(v===undefined||v===null?'':v)}catch(e){console.log('')}})" "$1"; }
 wjson() { printf '%s' "$2" > "q_$1.json"; }
@@ -18,8 +19,8 @@ if [ -n "$TA" ] && [ "$ID_A" != "$ID_B2" ]; then echo "B1 PASS"; else echo "B1 F
 
 step "B2 预设地点"
 wjson e1 '{"name":"学校东门","sortOrder":1}'; wjson e2 '{"name":"高铁站","sortOrder":2}'
-curl -s -o /dev/null -X POST $B/admin/places -H "X-Admin-Key: dev-admin-key" -H 'Content-Type: application/json' --data-binary @q_e1.json
-curl -s -o /dev/null -X POST $B/admin/places -H "X-Admin-Key: dev-admin-key" -H 'Content-Type: application/json' --data-binary @q_e2.json
+curl -s -o /dev/null -X POST $B/admin/places -H "X-Admin-Key: $ADMIN_KEY" -H 'Content-Type: application/json' --data-binary @q_e1.json
+curl -s -o /dev/null -X POST $B/admin/places -H "X-Admin-Key: $ADMIN_KEY" -H 'Content-Type: application/json' --data-binary @q_e2.json
 PL=$(curl -s $B/places -H "Authorization: Bearer $TA"); PID=$(echo "$PL" | J "[0].id")
 if [ -n "$PID" ]; then echo "B2 PASS pid=$PID"; else echo "B2 FAIL: $PL"; fi
 
