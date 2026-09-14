@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -63,5 +64,16 @@ class AdminRideSuppressionServiceTest {
                     && iterator.next().getRideId() == 34L
                     && !iterator.hasNext();
         }));
+    }
+
+    @Test
+    void bulkSuppressRejectsNonPositiveIdsBeforeReadingOrWritingAudits() {
+        var repository = mock(AdminRideSuppressionRepository.class);
+        var service = new AdminRideSuppressionService(repository);
+
+        assertThrows(IllegalArgumentException.class, () -> service.suppressAll(List.of(12L, 0L)));
+
+        verify(repository, never()).findAllById(org.mockito.ArgumentMatchers.<Long>anyIterable());
+        verify(repository, never()).saveAll(any());
     }
 }
