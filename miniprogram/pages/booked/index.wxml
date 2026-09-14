@@ -2,6 +2,12 @@
      信息密度优先，减少进入列表前的视觉过渡 -->
 <view wx:if="{{loading}}" class="state-block">加载中…</view>
 
+<view wx:elif="{{!realtimeEnabled}}" class="state-block feature-closed">
+  <view class="feature-closed-title">实时拼暂未开放</view>
+  <view class="meta feature-closed-announcement">{{announcement}}</view>
+  <view class="retry" bindtap="retry">点击刷新</view>
+</view>
+
 <view wx:elif="{{loadFailed}}" class="state-block">
   <view>加载失败</view>
   <view class="retry" bindtap="retry">点击重试</view>
@@ -38,6 +44,6 @@
   </view>
 </block>
 
-<view style="padding:20rpx 24rpx 40rpx">
+<view wx:if="{{realtimeEnabled}}" style="padding:20rpx 24rpx 40rpx">
   <view class="btn-plain" bindtap="goImport">我已打上车，发布行程</view>
 </view>

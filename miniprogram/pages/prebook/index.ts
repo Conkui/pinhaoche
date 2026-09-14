@@ -51,7 +51,7 @@ Page({
     loading: true,
     loadFailed: false,
     /** 运营关闭时不请求/渲染拼车单，改为单一公告态，避免旧缓存造成误导。 */
-    realtimeEnabled: true,
+    findFriendsEnabled: true,
     announcement: '',
     /** 服务端原始列表仅作本页只读快照；筛选变化不重复请求接口。 */
     allRides: [] as Ride[],
@@ -179,13 +179,13 @@ Page({
 
   reload(done?: () => void) {
     getApp().ensureLogin()
-      .then(() => featureApi.getRealtimeCarpoolAvailability())
+      .then(() => featureApi.getFindFriendsAvailability())
       .then((availability: RealtimeCarpoolAvailability) => {
         if (!availability.enabled) {
           this.setData({
             loading: false,
             loadFailed: false,
-            realtimeEnabled: false,
+            findFriendsEnabled: false,
             announcement: availability.announcement,
             allRides: [],
             cards: [],
@@ -193,7 +193,7 @@ Page({
           done?.()
           return null
         }
-        this.setData({ realtimeEnabled: true, announcement: '' })
+        this.setData({ findFriendsEnabled: true, announcement: '' })
         return rideApi.listRides('PREBOOK')
       })
       .then((rides: Ride[] | null) => {
@@ -245,7 +245,7 @@ Page({
   },
 
   goPublish() {
-    if (!this.data.realtimeEnabled) {
+    if (!this.data.findFriendsEnabled) {
       return
     }
     wx.navigateTo({ url: '/pages/publish/index' })

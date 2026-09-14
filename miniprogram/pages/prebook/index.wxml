@@ -1,8 +1,8 @@
 <view wx:if="{{loading}}" class="state-block">加载中…</view>
 
-<!-- 运营关闭实时拼时，列表与发布入口必须整体替换，不能只把按钮置灰后仍展示过时订单。 -->
-<view wx:elif="{{!realtimeEnabled}}" class="state-block feature-closed">
-  <view class="feature-closed-title">实时拼暂未开放</view>
+<!-- 找拼友关闭时，列表与发布入口必须整体替换，不能只把按钮置灰后仍展示过时订单。 -->
+<view wx:elif="{{!findFriendsEnabled}}" class="state-block feature-closed">
+  <view class="feature-closed-title">找拼友暂未开放</view>
   <view class="meta feature-closed-announcement">{{announcement}}</view>
   <view class="retry" bindtap="retry">点击刷新</view>
 </view>
@@ -73,8 +73,8 @@
 </block>
 
 <!-- 底部安全占位：悬浮按钮固定吸底，列表末尾留足空间，防止最后一张卡被遮挡 -->
-<view wx:if="{{realtimeEnabled}}" class="fab-safe-space"></view>
+<view wx:if="{{findFriendsEnabled}}" class="fab-safe-space"></view>
 
 <!-- 悬浮发布按钮：本页唯一 Primary Action，复用全局 .btn-primary 渐变+投影，
      本元素只附加定位样式；固定吸底保证任意滚动位置都能发布 -->
-<view wx:if="{{realtimeEnabled}}" class="publish-fab btn-primary" bindtap="goPublish">发布预打车</view>
+<view wx:if="{{findFriendsEnabled}}" class="publish-fab btn-primary" bindtap="goPublish">发布预打车</view>

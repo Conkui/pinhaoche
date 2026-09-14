@@ -258,7 +258,7 @@
         <label><input type="checkbox" id="selectVisibleRides"> 全选当前页</label>
         <span class="muted" id="selectedRideCount">已选择 0 条（最多 100 条）</span>
         <div class="spacer"></div>
-        <button class="btn btn-sm btn-danger" id="bulkDeleteRidesBtn" disabled>批量删除已选</button>
+        <button class="btn btn-sm btn-danger" id="bulkDeleteRidesBtn" disabled>批量删除（隐藏）已选</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -745,7 +745,7 @@
         '<td class="num">' + escapeHtml(formatCapacity(r.memberCount, r.capacity)) + '</td>' +
         '<td>' + (r.plateNumber ? escapeHtml(r.plateNumber) : '<span class="muted">-</span>') + '</td>' +
         '<td class="muted">' + escapeHtml(formatDateTime(r.departTime)) + '</td>' +
-        '<td><button class="btn btn-sm btn-danger" data-ride-delete="' + escapeHtml(String(r.id)) + '">删除</button></td>' +
+        '<td><button class="btn btn-sm btn-danger" data-ride-delete="' + escapeHtml(String(r.id)) + '">删除（隐藏）</button></td>' +
         '</tr>';
     }
     body.innerHTML = html;
@@ -799,13 +799,13 @@
   function bulkDeleteRides() {
     var ids = Object.keys(state.selectedRideIds).map(Number).filter(function (id) { return Number.isFinite(id) && id > 0; });
     if (ids.length === 0 || ids.length > 100) { showToast('请选择 1 至 100 条拼车单', 'error'); return; }
-    if (!window.confirm('确认批量删除 ' + ids.length + ' 条拼车单？删除会被审计且不可撤销。')) return;
+    if (!window.confirm('确认批量删除（对用户隐藏） ' + ids.length + ' 条拼车单？订单不会物理删除，管理端保留审计记录。')) return;
     var button = document.getElementById('bulkDeleteRidesBtn');
     button.disabled = true;
     api('/api/v1/admin/rides/bulk-suppress', { method: 'POST', body: { rideIds: ids } })
       .then(function (result) {
         state.selectedRideIds = {};
-        showToast('批量删除完成：新增 ' + Number(result.newlySuppressed || 0) + ' 条，已删除 ' + Number(result.alreadySuppressed || 0) + ' 条', 'success');
+        showToast('批量隐藏完成：新增 ' + Number(result.newlySuppressed || 0) + ' 条，已处理 ' + Number(result.alreadySuppressed || 0) + ' 条', 'success');
         loadRides();
       })
       .catch(function (e) { showError('rides', e.message); })
@@ -814,10 +814,10 @@
 
   function deleteRide(rideId) {
     if (!Number.isFinite(rideId) || rideId <= 0) return;
-    if (!window.confirm('确认删除该拼车单？删除指令会被审计且不可撤销。')) return;
+    if (!window.confirm('确认删除（对用户隐藏）该拼车单？订单不会物理删除，管理端保留审计记录。')) return;
     api('/api/v1/admin/rides/' + encodeURIComponent(String(rideId)), { method: 'DELETE' })
       .then(function () {
-        showToast('已提交删除', 'success');
+        showToast('已隐藏该订单', 'success');
         loadRides();
       })
       .catch(function (e) { showError('rides', e.message); });

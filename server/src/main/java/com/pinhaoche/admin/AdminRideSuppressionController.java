@@ -1,6 +1,7 @@
 package com.pinhaoche.admin;
 
 import com.pinhaoche.common.api.ApiException;
+import com.pinhaoche.ride.RideService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -19,13 +20,16 @@ import java.util.List;
 @RequestMapping("/api/v1/admin/rides")
 public class AdminRideSuppressionController {
     private final AdminRideSuppressionService suppressionService;
+    private final RideService rideService;
 
-    public AdminRideSuppressionController(AdminRideSuppressionService suppressionService) {
+    public AdminRideSuppressionController(AdminRideSuppressionService suppressionService, RideService rideService) {
         this.suppressionService = suppressionService;
+        this.rideService = rideService;
     }
 
     @DeleteMapping("/{rideId}")
     public AdminRideSuppressionService.SuppressionResult delete(@PathVariable long rideId) {
+        validatePositiveAndExisting(rideId);
         return suppressionService.suppress(rideId);
     }
 
@@ -41,9 +45,23 @@ public class AdminRideSuppressionController {
     public AdminRideSuppressionService.BulkSuppressionResult bulkSuppress(
             @Valid @RequestBody BulkSuppressRequest request) {
         try {
+            for (Long rideId : request.rideIds()) {
+                validatePositiveAndExisting(rideId);
+            }
             return suppressionService.suppressAll(request.rideIds());
         } catch (IllegalArgumentException e) {
             throw ApiException.validation(e.getMessage());
         }
+    }
+
+    /**
+     * 通过 Ride 应用服务做存在性校验，而非 admin 跨模块访问 Ride repository。
+     * 先全部校验再写入，任一无效 ID 都不会留下半批审计记录；已隐藏订单仍可通过该校验以保持删除幂等。
+     */
+    private void validatePositiveAndExisting(long rideId) {
+        if (rideId <= 0) {
+            throw ApiException.validation("rideId 必须为正整数");
+        }
+        rideService.assertExistsForAdmin(rideId);
     }
 }

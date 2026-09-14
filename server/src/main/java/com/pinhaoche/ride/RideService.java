@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Ride 应用服务（Agent B 边界：Ride + 状态机 + 发布/取消/加入/人数并发/幂等；不处理聊天）。
@@ -83,27 +84,39 @@ public class RideService {
     public List<RideDto> list(String view) {
         return switch (view) {
             case "PREBOOK" -> {
-                // 关闭后服务端同样拒绝返回实时拼数据，不能只依赖小程序公告页。
-                featureAvailabilityService.requireRealtimeCarpoolEnabled();
-                yield rideRepository
+                // 找拼友关闭后服务端同样拒绝返回预打车数据，不能只依赖小程序公告页。
+                featureAvailabilityService.requireFindFriendsEnabled();
+                List<Ride> rides = rideRepository
                         // 用户红线：出发时间已过的单对所有人隐藏（过期任务会随后把状态落为 EXPIRED）
                         .findByStatusInAndDepartTimeAfterOrderByDepartTimeAsc(
-                                List.of(RideStatus.PUBLISHED, RideStatus.MATCHING), OffsetDateTime.now())
-                        .stream().filter(r -> !suppressionService.isSuppressed(r.getId())).map(RideService::toDto).toList();
+                                List.of(RideStatus.PUBLISHED, RideStatus.MATCHING), OffsetDateTime.now());
+                yield visibleDtos(rides);
             }
-            case "BOOKED" -> rideRepository.findByStatusOrderByUpdatedAtDesc(RideStatus.BOOKED)
-                    .stream().filter(r -> !suppressionService.isSuppressed(r.getId())).map(RideService::toDto).toList();
+            case "BOOKED" -> {
+                // 实时拼独立控制“我已打上车”的供给和列表，不受找拼友开关影响。
+                featureAvailabilityService.requireRealtimeCarpoolEnabled();
+                yield visibleDtos(rideRepository.findByStatusOrderByUpdatedAtDesc(RideStatus.BOOKED));
+            }
             default -> throw ApiException.validation("view 必须为 PREBOOK 或 BOOKED");
         };
     }
 
     @Transactional(readOnly = true)
     public RideDto get(long rideId) {
-        if (suppressionService.isSuppressed(rideId)) {
-            throw ApiException.notFound("拼车记录不存在");
-        }
+        assertNotSuppressed(rideId);
         return rideRepository.findById(rideId).map(RideService::toDto)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
+    }
+
+    /**
+     * 管理端批量隐藏的存在性校验边界。它刻意不把 repository 暴露给 admin 模块，
+     * 并允许已隐藏记录通过校验，使重复删除仍保持幂等。
+     */
+    @Transactional(readOnly = true)
+    public void assertExistsForAdmin(long rideId) {
+        if (!rideRepository.existsById(rideId)) {
+            throw ApiException.notFound("拼车记录不存在");
+        }
     }
 
     /** 详情保持既有冻结 Ride DTO；联系人由 RFC-012 的 owner-only 独立端点提供。 */
@@ -118,6 +131,7 @@ public class RideService {
      */
     @Transactional(readOnly = true)
     public void assertChatPeerAllowed(long rideId, long requesterId, long peerUserId) {
+        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (requesterId == ride.getOwnerId()) {
@@ -134,13 +148,13 @@ public class RideService {
     /** RFC-008：我的发布（含已取消/过期/结束），供"我的发布"管理页使用。 */
     @Transactional(readOnly = true)
     public List<RideDto> listMine(long ownerId) {
-        return rideRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId)
-                .stream().map(RideService::toDto).toList();
+        return visibleDtos(rideRepository.findByOwnerIdOrderByCreatedAtDesc(ownerId));
     }
 
     /** RFC-012：仅订单 owner 可取最小联系人卡，不扩充冻结的 Ride DTO。 */
     @Transactional(readOnly = true)
     public List<MemberContactDto> listMemberContacts(long rideId, long ownerId) {
+        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() != ownerId) {
@@ -153,7 +167,7 @@ public class RideService {
 
     @Transactional
     public RideDto create(long ownerId, CreateRideRequest req, String idempotencyKey) {
-        featureAvailabilityService.requireRealtimeCarpoolEnabled();
+        featureAvailabilityService.requireFindFriendsEnabled();
         validateCapacity(req.memberCount(), req.capacity());
         validateStatusFields(req);
         return idempotency.execute(ownerId, idempotencyKey, "ride.create", req,
@@ -191,13 +205,15 @@ public class RideService {
      */
     @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public RideDto join(long rideId, long userId, String idempotencyKey) {
-        featureAvailabilityService.requireRealtimeCarpoolEnabled();
+        featureAvailabilityService.requireFindFriendsEnabled();
         return idempotency.execute(userId, idempotencyKey, "ride.join", rideId,
                 id -> get(rideId), () -> doJoin(rideId, userId));
     }
 
     /** 包级可见以便针对"成功才写 Outbox"不变量做无需 Spring 上下文的单元测试。 */
     RideDto doJoin(long rideId, long userId) {
+        // 管理端已隐藏的测试/违规订单必须在写入成员、人数原子更新和通知前全部失效。
+        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() == userId) {
@@ -246,6 +262,7 @@ public class RideService {
     }
 
     private RideDto doTransit(long rideId, long userId, RideStatus target, long version) {
+        assertNotSuppressed(rideId);
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> ApiException.notFound("拼车记录不存在"));
         if (ride.getOwnerId() != userId) {
@@ -358,6 +375,20 @@ public class RideService {
                     objectMapper.writeValueAsString(payload)));
         } catch (Exception e) {
             throw new IllegalStateException("领域事件序列化失败", e);
+        }
+    }
+
+    /** 将一次查询的结果批量排除已隐藏订单，避免每张卡再执行一次 exists 查询。 */
+    private List<RideDto> visibleDtos(List<Ride> rides) {
+        Set<Long> suppressedIds = suppressionService.suppressedRideIds(
+                rides.stream().map(Ride::getId).toList());
+        return rides.stream().filter(ride -> !suppressedIds.contains(ride.getId())).map(RideService::toDto).toList();
+    }
+
+    /** 所有用户可达入口共用该门禁，防止旧链接在管理端隐藏后继续读写订单。 */
+    private void assertNotSuppressed(long rideId) {
+        if (suppressionService.isSuppressed(rideId)) {
+            throw ApiException.notFound("拼车记录不存在");
         }
     }
 

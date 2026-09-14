@@ -10,3 +10,8 @@ export interface RealtimeCarpoolAvailability {
 export function getRealtimeCarpoolAvailability(): Promise<RealtimeCarpoolAvailability> {
   return request<RealtimeCarpoolAvailability>('/features/realtime-carpool')
 }
+
+/** 找拼友（预打车）与实时拼是独立运营功能，必须读取各自的服务端开关。 */
+export function getFindFriendsAvailability(): Promise<RealtimeCarpoolAvailability> {
+  return request<RealtimeCarpoolAvailability>('/features/find-friends')
+}

@@ -2,7 +2,7 @@
 import * as rideApi from '../../services/ride'
 import { Ride } from '../../services/ride'
 import { formatDistance, remainingSeats, waitingText } from '../../utils/format'
-import { getRealtimeCarpoolAvailability } from '../../services/feature'
+import { getRealtimeCarpoolAvailability, RealtimeCarpoolAvailability } from '../../services/feature'
 
 interface BookedCard {
   id: number
@@ -19,6 +19,9 @@ Page({
   data: {
     loading: true,
     loadFailed: false,
+    /** 实时拼关闭时，整页切换为公告，防止缓存中的已打上车订单继续展示。 */
+    realtimeEnabled: true,
+    announcement: '',
     cards: [] as BookedCard[],
   },
 
@@ -33,8 +36,27 @@ Page({
   reload(done?: () => void) {
     const app = getApp()
     app.ensureLogin()
-      .then(() => rideApi.listRides('BOOKED'))
-      .then((rides: Ride[]) => {
+      .then(() => getRealtimeCarpoolAvailability())
+      .then((availability: RealtimeCarpoolAvailability) => {
+        if (!availability.enabled) {
+          this.setData({
+            loading: false,
+            loadFailed: false,
+            realtimeEnabled: false,
+            announcement: availability.announcement,
+            cards: [],
+          })
+          done?.()
+          return null
+        }
+        this.setData({ realtimeEnabled: true, announcement: '' })
+        return rideApi.listRides('BOOKED')
+      })
+      .then((rides: Ride[] | null) => {
+        // 已展示停用公告时，不可用空列表覆盖该状态。
+        if (rides === null) {
+          return
+        }
         this.setData({
           loading: false,
           loadFailed: false,
@@ -83,6 +105,9 @@ Page({
   },
 
   goImport() {
+    if (!this.data.realtimeEnabled) {
+      return
+    }
     // 入口每次实时读取运营开关：缓存页面不能绕过后台刚刚发布的停用公告。
     getRealtimeCarpoolAvailability()
       .then((feature) => {

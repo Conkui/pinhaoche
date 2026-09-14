@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Collection;
 
 /** 管理端删除命令：先经 Ride 应用服务确认记录存在，绝不跨模块直接读取 Ride repository。 */
 @Service
@@ -71,4 +72,20 @@ public class AdminRideSuppressionService {
 
     @Transactional(readOnly = true)
     public boolean isSuppressed(long rideId) { return repository.existsById(rideId); }
+
+    /**
+     * 列表页一次性取得已隐藏 ID，避免 Ride 列表逐条 exists 造成 N+1 查询。
+     * 仅返回审计表主键，不向 Ride 模块泄露 admin 实体。
+     */
+    @Transactional(readOnly = true)
+    public Set<Long> suppressedRideIds(Collection<Long> rideIds) {
+        if (rideIds.isEmpty()) {
+            return Set.of();
+        }
+        Set<Long> suppressed = new LinkedHashSet<>();
+        for (AdminRideSuppression entry : repository.findAllById(rideIds)) {
+            suppressed.add(entry.getRideId());
+        }
+        return Set.copyOf(suppressed);
+    }
 }
