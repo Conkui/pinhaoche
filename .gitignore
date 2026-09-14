@@ -9,3 +9,4 @@ scripts/code_*.txt
 scripts/.rid15
 docs/ui-preview/preview-*.png
 .DS_Store
+docs/ui-preview/admin-*.png
