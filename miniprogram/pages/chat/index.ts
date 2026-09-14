@@ -34,6 +34,10 @@ Page({
     historyLoading: true,
     historyFailed: false,
     scrollTop: 99999,
+    deleteMenuVisible: false,
+    deleteMenuLeft: 0,
+    deleteMenuTop: 0,
+    deleteMessageId: 0,
   },
 
   socket: null as ChatSocket | null,
@@ -231,5 +235,54 @@ Page({
     if (!ok) {
       this.markFailed(clientMsgId)
     }
+  },
+
+  /**
+   * 仅自己的已确认消息才有服务端 ID 可以删除。按钮以触点为锚，避免固定在屏幕角落
+   * 让用户误以为会删除另一条消息。
+   */
+  onBubbleLongPress(e: WechatMiniprogram.TouchEvent) {
+    const messageId = Number(e.currentTarget.dataset.mid)
+    const mine = e.currentTarget.dataset.mine === true || e.currentTarget.dataset.mine === 'true'
+    const state = String(e.currentTarget.dataset.state)
+    if (!mine || state !== 'acked' || !messageId) {
+      return
+    }
+    const touch = e.touches?.[0] ?? e.changedTouches?.[0]
+    const windowWidth = wx.getSystemInfoSync().windowWidth
+    const rawLeft = touch?.clientX ?? 0
+    this.setData({
+      deleteMenuVisible: true,
+      deleteMenuLeft: Math.max(12, Math.min(rawLeft - 70, windowWidth - 152)),
+      deleteMenuTop: Math.max(12, (touch?.clientY ?? 0) - 84),
+      deleteMessageId: messageId,
+    })
+  },
+
+  closeDeleteMenu() {
+    this.setData({ deleteMenuVisible: false, deleteMessageId: 0 })
+  },
+
+  /** 乐观移除，接口失败才按原位置恢复，避免用户误以为点击无响应。 */
+  deleteSelectedMessage() {
+    const messageId = this.data.deleteMessageId
+    const index = this.data.bubbles.findIndex((bubble) => bubble.messageId === messageId
+      && bubble.mine && bubble.state === 'acked')
+    this.closeDeleteMenu()
+    if (index < 0) {
+      return
+    }
+    const deleted = this.data.bubbles[index]
+    this.setData({ bubbles: this.data.bubbles.filter((bubble) => bubble.messageId !== messageId) })
+    chatApi.deleteMessage(this.data.sessionId, messageId)
+      .catch(() => {
+        // 重连补偿可能已令列表变化；按当前长度夹住下标即可保留其余消息顺序。
+        const bubbles = this.data.bubbles.slice()
+        if (!bubbles.some((bubble) => bubble.messageId === messageId)) {
+          bubbles.splice(Math.min(index, bubbles.length), 0, deleted)
+          this.setData({ bubbles })
+        }
+        wx.showToast({ title: '删除失败，请重试', icon: 'none' })
+      })
   },
 })

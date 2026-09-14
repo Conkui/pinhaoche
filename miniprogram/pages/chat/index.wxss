@@ -60,6 +60,26 @@ page {
   margin-top: 6rpx;
 }
 
+/* 长按菜单固定在触点附近；遮罩只负责收起菜单，不遮挡或修改聊天内容。 */
+.delete-menu-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.delete-menu {
+  position: fixed;
+  z-index: 21;
+  min-width: 112rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 12rpx;
+  background: #ffffff;
+  color: #ff4d4f;
+  font-size: 28rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 16rpx rgba(15, 23, 42, 0.16);
+}
+
 /* 失败态用 danger 功能色 #ff4d4f，与全局语义一致 */
 .state-failed {
   color: #ff4d4f;

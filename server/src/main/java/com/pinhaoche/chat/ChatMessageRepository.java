@@ -15,6 +15,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     Optional<ChatMessage> findBySenderIdAndClientMsgId(long senderId, String clientMsgId);
 
+    List<ChatMessage> findBySessionIdIn(List<Long> sessionIds);
+
     long countBySessionIdAndIdGreaterThanAndSenderIdNot(long sessionId, long afterId, long senderId);
 
     // ---------- RFC-009 管理端只读统计（只加不改） ----------

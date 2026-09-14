@@ -47,3 +47,8 @@ export function fetchMessages(sessionId: number, afterId: number): Promise<Messa
 export function markRead(sessionId: number): Promise<void> {
   return request<void>(`/chat-sessions/${sessionId}/read`, { method: 'POST' })
 }
+
+/** 只允许删除本人已持久化的消息；发送中/失败消息没有服务端 messageId，不走此接口。 */
+export function deleteMessage(sessionId: number, messageId: number): Promise<void> {
+  return request<void>(`/chat-sessions/${sessionId}/messages/${messageId}`, { method: 'DELETE' })
+}

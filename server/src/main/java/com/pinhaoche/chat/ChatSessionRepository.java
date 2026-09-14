@@ -11,4 +11,6 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
     Optional<ChatSession> findByRideIdAndUserLowIdAndUserHighId(long rideId, long lowId, long highId);
 
     List<ChatSession> findByUserLowIdOrUserHighIdOrderByUpdatedAtDesc(long lowId, long highId);
+
+    List<ChatSession> findByRideId(long rideId);
 }

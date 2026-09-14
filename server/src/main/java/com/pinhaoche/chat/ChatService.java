@@ -179,12 +179,62 @@ public class ChatService {
         }
     }
 
+    /**
+     * 用户侧删除只允许删除本人在当前会话中已经落库的消息。
+     * 不能仅按 messageId 删除：ID 可被猜测，必须同时校验会话成员、会话归属和 senderId。
+     * 同事务清理对应 outbox，避免尚未投递的旧消息在删除后再触发通知。
+     */
+    @Transactional
+    public void deleteOwnMessage(long sessionId, long messageId, long userId) {
+        assertMember(sessionId, userId);
+        ChatMessage message = messageRepository.findById(messageId)
+                .orElseThrow(() -> ApiException.notFound("消息不存在"));
+        if (message.getSessionId() != sessionId) {
+            throw ApiException.notFound("消息不存在");
+        }
+        if (message.getSenderId() != userId) {
+            throw ApiException.forbidden("只能删除自己发送的消息");
+        }
+        deleteMessageOutboxEvents(List.of(messageId));
+        messageRepository.delete(message);
+    }
+
+    /**
+     * 管理员硬删除订单时由 admin 模块调用的应用服务边界。
+     * 外键要求先删消息后删会话；未读键只在 Redis，使用会话内两名成员精确删除，
+     * 不扫描全库。已投递事件无法撤回，但待处理的 chat_message outbox 会一并清除。
+     */
+    @Transactional
+    public void deleteRideDataForAdmin(long rideId) {
+        List<ChatSession> sessions = sessionRepository.findByRideId(rideId);
+        if (sessions.isEmpty()) {
+            return;
+        }
+        List<Long> sessionIds = sessions.stream().map(ChatSession::getId).toList();
+        List<ChatMessage> messages = messageRepository.findBySessionIdIn(sessionIds);
+        deleteMessageOutboxEvents(messages.stream().map(ChatMessage::getId).toList());
+        messageRepository.deleteAll(messages);
+
+        List<String> unreadKeys = sessions.stream()
+                .flatMap(session -> java.util.stream.Stream.of(
+                        unreadKey(session.getId(), session.getUserLowId()),
+                        unreadKey(session.getId(), session.getUserHighId())))
+                .toList();
+        try {
+            redis.delete(unreadKeys);
+        } catch (RuntimeException e) {
+            // MySQL 硬删除不能因 Redis 临时不可用而回滚；未读仅是可再生缓存。
+            log.warn("清理订单聊天未读缓存失败 ride={}", rideId, e);
+        }
+        sessionRepository.deleteAll(sessions);
+    }
+
     // ---------- 未读 ----------
 
     /** 未读数只存 Redis（规范 §13：Redis 只负责在线状态/未读数/路由/冷却，MySQL 为最终事实）。 */
     public int unreadCount(long sessionId, long userId) {
         try {
-            String v = redis.opsForValue().get("chat:unread:%d:%d".formatted(sessionId, userId));
+            String v = redis.opsForValue().get(unreadKey(sessionId, userId));
             return v == null ? 0 : Integer.parseInt(v);
         } catch (RuntimeException e) {
             return 0;
@@ -196,7 +246,7 @@ public class ChatService {
     public void markRead(long sessionId, long userId) {
         assertMember(sessionId, userId);
         try {
-            redis.delete("chat:unread:%d:%d".formatted(sessionId, userId));
+            redis.delete(unreadKey(sessionId, userId));
         } catch (RuntimeException ignored) {
         }
     }
@@ -204,7 +254,7 @@ public class ChatService {
     /** 由 WebSocket 推送路径调用：接收者不在当前聊天页时累加未读（冷却由 notification 模块负责）。 */
     public void incrementUnread(long sessionId, long userId) {
         try {
-            redis.opsForValue().increment("chat:unread:%d:%d".formatted(sessionId, userId));
+            redis.opsForValue().increment(unreadKey(sessionId, userId));
         } catch (RuntimeException e) {
             log.warn("未读数累加失败（Redis 异常）session={} user={}", sessionId, userId);
         }
@@ -235,6 +285,16 @@ public class ChatService {
         } catch (Exception e) {
             throw new IllegalStateException("领域事件序列化失败", e);
         }
+    }
+
+    /** 按聚合类型和消息 ID 精确删除，绝不扫描或触碰其他领域事件。 */
+    private void deleteMessageOutboxEvents(List<Long> messageIds) {
+        messageIds.forEach(messageId ->
+                outboxRepository.deleteByAggregateTypeAndAggregateId("chat_message", messageId));
+    }
+
+    private static String unreadKey(long sessionId, long userId) {
+        return "chat:unread:%d:%d".formatted(sessionId, userId);
     }
 
     private static MessageDto toDto(ChatMessage m) {

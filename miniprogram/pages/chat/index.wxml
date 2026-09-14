@@ -9,7 +9,8 @@
 
   <block wx:for="{{bubbles}}" wx:key="key">
     <view class="row {{item.mine ? 'row-mine' : ''}}">
-      <view class="bubble {{item.mine ? 'bubble-mine' : ''}}">
+      <view class="bubble {{item.mine ? 'bubble-mine' : ''}}" data-mid="{{item.messageId}}"
+            data-mine="{{item.mine}}" data-state="{{item.state}}" catchlongpress="onBubbleLongPress">
         <text>{{item.content}}</text>
       </view>
       <view class="bubble-meta" wx:if="{{item.mine}}">
@@ -21,6 +22,10 @@
     </view>
   </block>
 </scroll-view>
+
+<view wx:if="{{deleteMenuVisible}}" class="delete-menu-mask" catchtap="closeDeleteMenu">
+  <view class="delete-menu" style="left: {{deleteMenuLeft}}px; top: {{deleteMenuTop}}px;" catchtap="deleteSelectedMessage">删除</view>
+</view>
 
 <view class="quick-bar">
   <view class="quick-chip" wx:for="{{quickTexts}}" wx:key="*this" data-text="{{item}}" bindtap="onQuickText">
