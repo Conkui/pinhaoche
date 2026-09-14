@@ -3,6 +3,7 @@ package com.pinhaoche.chat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pinhaoche.common.api.ApiException;
 import com.pinhaoche.common.idempotency.IdempotencyService;
+import com.pinhaoche.common.util.TextSanitizer;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
 import org.slf4j.Logger;
@@ -138,12 +139,21 @@ public class ChatService {
         if (content.length() > CONTENT_MAX) {
             throw ApiException.validation("消息内容超长（最多 %d 字）".formatted(CONTENT_MAX));
         }
+        // RFC-010 输入净化：放在长度校验之后（按用户原始输入判定长度，避免剥离后长度语义漂移）、
+        // 入库之前。为什么必须净化：消息会经 WebSocket 原样推给对方并长期存库，控制字符（0x00-0x1F
+        // 中除 \n \t 外）无业务语义，却可伪造换行污染聊天记录渲染、破坏日志/存储链路。
+        // 净化结果放新变量：参数 content 仍被下方事务 lambda 引用，必须是 effectively final。
+        String sanitized = TextSanitizer.clean(content);
+        if (sanitized.isBlank()) {
+            // 极端情况：输入全是控制字符，净化后为空。仍按参数非法拒绝，不落空消息。
+            throw ApiException.validation("消息内容不能为空");
+        }
 
         try {
             // 独立事务：消息落库 + 会话时间戳 + outbox 事件（同事务提交，规范 §22）
             return txTemplate.execute(status -> {
                 ChatMessage m = messageRepository.save(new ChatMessage(sessionId, senderId,
-                        clientMsgId, "TEXT", content, OffsetDateTime.now()));
+                        clientMsgId, "TEXT", sanitized, OffsetDateTime.now()));
                 session.setUpdatedAt(OffsetDateTime.now());
                 long receiverId = session.peerOf(senderId);
                 emit(sessionId, m.getId(), senderId, receiverId);
@@ -223,5 +233,30 @@ public class ChatService {
     private static MessageDto toDto(ChatMessage m) {
         return new MessageDto(m.getId(), m.getSessionId(), m.getSenderId(),
                 m.getClientMsgId(), m.getType(), m.getContent(), m.getCreatedAt());
+    }
+
+    // ---------- RFC-009 管理端流量统计（只追加，不动既有方法；admin StatsController 经此调用，不碰本模块 repository） ----------
+
+    /** 会话总数：MySQL 为事实源，直接 count 表（Redis 里的未读/在线状态不参与统计）。 */
+    @Transactional(readOnly = true)
+    public long countSessions() {
+        return sessionRepository.count();
+    }
+
+    @Transactional(readOnly = true)
+    public long countMessages() {
+        return messageRepository.count();
+    }
+
+    /** "今日新增消息"计数，时间边界由调用方统一用 UTC 计算。 */
+    @Transactional(readOnly = true)
+    public long countMessagesCreatedAfter(OffsetDateTime time) {
+        return messageRepository.countByCreatedAtAfter(time);
+    }
+
+    /** 逐日统计：[from, to) 半开区间内创建的消息数（from 含、to 不含，避免毫秒边界重复/遗漏）。 */
+    @Transactional(readOnly = true)
+    public long countMessagesCreatedBetween(OffsetDateTime from, OffsetDateTime to) {
+        return messageRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to);
     }
 }

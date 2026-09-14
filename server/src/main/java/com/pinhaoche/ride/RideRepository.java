@@ -1,6 +1,8 @@
 package com.pinhaoche.ride;
 
 import jakarta.persistence.LockModeType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
@@ -65,4 +67,21 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
                           @Param("version") long version,
                           @Param("expected") RideStatus expected,
                           @Param("target") RideStatus target);
+
+    // ---------- RFC-009 管理端只读统计（只加不改，均不带写语义） ----------
+
+    /** 管理端按状态分页；排序由调用方 Pageable 携带。 */
+    Page<Ride> findByStatus(RideStatus status, Pageable pageable);
+
+    /** 活跃单（PUBLISHED/MATCHING/BOOKED/IN_PROGRESS）或任意状态集合的计数。 */
+    long countByStatusIn(List<RideStatus> statuses);
+
+    /** 某时间点（含）之后创建的单数，用于"今日新增"。 */
+    long countByCreatedAtAfter(OffsetDateTime time);
+
+    /**
+     * 逐日统计用：[start, end) 半开区间计数。为什么用半开区间——
+     * 按天分桶时上界取"次日零点"且不含，可避免毫秒级边界重复/遗漏，也无需处理 23:59:59.999 的精度问题。
+     */
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(OffsetDateTime start, OffsetDateTime end);
 }

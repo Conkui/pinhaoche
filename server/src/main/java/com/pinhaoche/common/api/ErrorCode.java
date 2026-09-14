@@ -12,5 +12,7 @@ public enum ErrorCode {
     IDEMPOTENCY_CONFLICT,
     VALIDATION_ERROR,
     NOT_FOUND,
-    UNAUTHORIZED
+    UNAUTHORIZED,
+    /** 接口限流（RFC-010）：登录按 IP 20/分钟、已登录用户 120/分钟，超限返回 HTTP 429。 */
+    RATE_LIMITED
 }

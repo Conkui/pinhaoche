@@ -32,6 +32,10 @@
 | B15 | 预打车时间效益（红线） | 构造 depart_time 已过的单 | 不出现在 view=PREBOOK；60s 内状态转 EXPIRED |
 | B16 | 意见反馈 | `POST /feedback {"content":"..."}` | 204；未登录 401 |
 | B17 | 通知冷却 | 同会话连发 5 条（接收者离页） | 订阅消息路径最多 1 次触发，未读数持续累加 |
+| B18 | 管理端鉴权 | 无 `X-Admin-Key` 调 admin 接口 | 403；带密钥 200（RFC-009） |
+| B19 | 管理端接口 | `stats/overview`、`feedback` 分页、`rides?status=`、非法 status | 字段完整（12 标量+daily 7 天升序）；非法 status 400；时间字段为 ISO 字符串 |
+| B20 | 登录限流 | 同 IP 连续 25 次 `POST /auth/login` | 恰好前 20 次 200，其后 429 RATE_LIMITED（RFC-010） |
+| B21 | 静态后台页 | `GET /admin/index.html` | 200；输入密钥后总览/反馈/拼车/地点四 Tab 正常出数据 |
 
 ## C. 微信开发者工具检查（人工，导入即运行）
 
@@ -54,6 +58,7 @@
 | 日期 | A1 | A2 | B 清单 | 结论 |
 | --- | --- | --- | --- | --- |
 | 2026-09-13 | PASS（7/7 单测，BUILD SUCCESS） | PASS（0 error） | B1-B17 全部 PASS（B9/B17 用 node ws 客户端模拟；B15 过期单 60s 内落 EXPIRED） | 通过 |
+| 2026-09-14（impl.4） | PASS（12/12 单测，含 RateLimitWindowTest） | PASS | B1-B17 回归 PASS；B18-B21 新增项 PASS（admin 403/200、ISO 时间、限流恰 20 次/分钟后 429、后台四 Tab 实测截图） | 通过 |
 
 ### 执行中发现并修复的缺陷（验收流程价值记录）
 
@@ -63,3 +68,5 @@
 4. 聊天重复 `clientMsgId` 插入污染 Hibernate 会话（提交时 "don't flush the Session after an exception occurs"）——插入隔离到 `TransactionTemplate` 独立事务，重复时新事务读回既有消息。
 5. **高并发抢位重试死循环**（压测发现）：MySQL 默认 REPEATABLE READ 下，抢位失败的事务重试时读到的仍是本事务快照的旧 `version`，重试注定失败（实测 50 并发抢 7 座只成功 5 个）——join 事务改为 `READ_COMMITTED` 隔离级 + 重试 8 次，修复后恰好 7 成功、0 超卖。该问题与规范 §20 的条件更新组合使用时必须注意。
 6. 环境类（非代码）：宿主机 3306/5672/6379 等端口被占用或落在 Windows 排除段 → compose 端口映射 23306/25672/16379；Git Bash 向 curl 传中文 argv 乱码 → 测试脚本统一 `--data-binary @file`。
+7. **自定义 ObjectMapper 覆盖 Boot 默认导致时间序列化为数字**（impl.4 发现）：`@Primary ObjectMapper` 使 Boot 的 `write-dates-as-timestamps=false` 失效，OffsetDateTime 输出 epoch 数字，前端会显示 1970 年——显式 `disable(WRITE_DATES_AS_TIMESTAMPS)` + UTC 时区修复。凡自定义 Jackson Bean 必须检查该开关。
+8. **幂等键失败卡死重试**（impl.3 发现）：业务抛异常后 Redis SETNX 键残留，客户端同 key 重试被误判 `IDEMPOTENCY_CONFLICT`——业务失败时补偿删除 Redis 键。

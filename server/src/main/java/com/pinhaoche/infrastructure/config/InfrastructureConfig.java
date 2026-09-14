@@ -22,6 +22,11 @@ public class InfrastructureConfig {
     @Bean
     @Primary
     public ObjectMapper objectMapper() {
-        return new ObjectMapper().findAndRegisterModules();
+        return new ObjectMapper()
+                .findAndRegisterModules()
+                // 自定义 @Primary ObjectMapper 会覆盖 Boot 默认配置；必须显式关闭时间戳序列化，
+                // 否则 OffsetDateTime 输出为数字 epoch，前端 new Date(数字秒) 会显示成 1970 年（集成验收发现）
+                .disable(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
     }
 }

@@ -29,16 +29,26 @@
 - `view=PREBOOK`：只返回 `depart_time` 尚未到达的 PUBLISHED/MATCHING 单；已过出发时间的单对所有人不可见，且服务端每 60s 将其状态落为 `EXPIRED`（`RideExpireJob`）。
 - `view=BOOKED`：BOOKED 状态单按更新时间倒序；车主"不再等人"（→IN_PROGRESS）后自动消失。
 
-## 管理端（非小程序契约，RFC-005）
+## 管理端（非小程序契约，RFC-005/009；统一 `X-Admin-Key` 鉴权）
 
 | 功能 | 接口 | 鉴权 |
 | --- | --- | --- |
-| 地点列表（含停用） | `GET /api/v1/admin/places` | `X-Admin-Key` |
+| Web 后台页面 | `GET /admin/index.html`（静态页，密钥在页面输入） | 数据接口均需 `X-Admin-Key` |
+| 流量统计 | `GET /api/v1/admin/stats/overview`（用户/拼车单/会话/消息/反馈 + 今日新增 + 最近 7 天 daily） | 同上 |
+| 反馈查看 | `GET /api/v1/admin/feedback?page=&size=` | 同上 |
+| 拼车管理（只读） | `GET /api/v1/admin/rides?status=&page=&size=` | 同上 |
+| 地点列表（含停用） | `GET /api/v1/admin/places` | 同上 |
 | 新增地点 | `POST /api/v1/admin/places` | 同上 |
 | 重命名 | `PUT /api/v1/admin/places/{id}` | 同上 |
 | 排序 | `PUT /api/v1/admin/places/reorder` | 同上 |
 | 启用 | `POST /api/v1/admin/places/{id}/enable` | 同上 |
 | 停用（软删） | `DELETE /api/v1/admin/places/{id}` | 同上 |
+
+## 接口防刷（RFC-010，对小程序生效）
+
+- `POST /auth/login`：按 IP 限流 20 次/分钟，超限 429 `{code:"RATE_LIMITED"}`；
+- 其余 `/api/v1/**`：按登录用户 120 次/分钟（身份取 token 解析结果）；
+- 聊天消息与反馈内容入库前经 `TextSanitizer` 剥离控制字符。
 
 ## UI 迭代时的检查清单
 

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /**
  * 全局异常处理：所有错误都返回 openapi.yaml 定义的 ApiError 结构 { code, message }。
- * 状态码约定：容量/版本/状态迁移/幂等冲突 → 409；权限 → 403；校验 → 400；未登录 → 401。
+ * 状态码约定：容量/版本/状态迁移/幂等冲突 → 409；权限 → 403；校验 → 400；未登录 → 401；限流 → 429（RFC-010）。
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -26,6 +26,7 @@ public class GlobalExceptionHandler {
             case UNAUTHORIZED -> 401;
             case NOT_FOUND -> 404;
             case VALIDATION_ERROR -> 400;
+            case RATE_LIMITED -> 429;
         }).body(ApiError.of(e.getCode(), e.getMessage()));
     }
 

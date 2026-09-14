@@ -305,4 +305,37 @@ public class RideService {
                 r.getPlateNumber(), r.getProvider(), r.getRemainingDistance(),
                 r.getDistanceUpdatedAt(), r.getWaitingMinutes(), r.getVersion(), r.getRemark());
     }
+
+    // ---------- RFC-009 管理端只读能力（只追加，不动既有方法；AdminRideController 与 admin StatsController 使用） ----------
+
+    /**
+     * 管理端全量分页：status 为 null 表示不过滤（ALL）。
+     * 排序由调用方 Pageable 携带（管理端约定 createdAt 倒序）；复用 toDto 保证与用户端字段完全一致。
+     */
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<RideDto> pageAll(RideStatus status,
+                                                                 org.springframework.data.domain.Pageable pageable) {
+        var result = status == null
+                ? rideRepository.findAll(pageable)
+                : rideRepository.findByStatus(status, pageable);
+        return result.map(RideService::toDto);
+    }
+
+    /** 状态集合计数：ridesActive（PUBLISHED/MATCHING/BOOKED/IN_PROGRESS）与 ridesExpired（EXPIRED）共用。 */
+    @Transactional(readOnly = true)
+    public long countByStatusIn(List<RideStatus> statuses) {
+        return rideRepository.countByStatusIn(statuses);
+    }
+
+    /** "今日新增"计数，时间边界由调用方统一用 UTC 计算。 */
+    @Transactional(readOnly = true)
+    public long countCreatedAfter(OffsetDateTime time) {
+        return rideRepository.countByCreatedAtAfter(time);
+    }
+
+    /** 逐日统计：[from, to) 半开区间内创建的单数（from 含、to 不含，避免毫秒边界重复/遗漏）。 */
+    @Transactional(readOnly = true)
+    public long countCreatedBetween(OffsetDateTime from, OffsetDateTime to) {
+        return rideRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to);
+    }
 }

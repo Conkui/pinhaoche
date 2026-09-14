@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>拼好车管理后台</title>
+<style>
+  /* ===== 设计令牌（Ant Design 风格） ===== */
+  :root {
+    --primary: #1677ff;
+    --primary-light: #e6f4ff;
+    --bg: #f5f7fa;
+    --text-1: #1f2937;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --success: #52c41a;
+    --warning: #faad14;
+    --danger: #ff4d4f;
+    --border: #e5e7eb;
+    --card-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-1);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== 顶部栏 ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    height: 56px; background: #fff;
+    display: flex; align-items: center; gap: 12px;
+    padding: 0 24px; border-bottom: 1px solid var(--border);
+  }
+  .brand { font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .brand .logo {
+    display: inline-block; width: 24px; height: 24px; line-height: 24px;
+    text-align: center; background: var(--primary); color: #fff;
+    border-radius: 6px; font-size: 13px; margin-right: 8px; vertical-align: -4px;
+  }
+  .key-box { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .key-box .hint { color: var(--text-3); font-size: 12px; }
+
+  /* ===== 表单控件 ===== */
+  input[type="password"], input[type="text"], input[type="number"], select {
+    height: 32px; border: 1px solid #d1d5db; border-radius: 6px;
+    padding: 0 10px; font-size: 13px; color: var(--text-1);
+    background: #fff; outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(22, 119, 255, .15);
+  }
+  .btn {
+    height: 32px; padding: 0 14px; border-radius: 6px; font-size: 13px;
+    cursor: pointer; border: 1px solid #d1d5db; background: #fff; color: var(--text-1);
+    transition: opacity .15s, background .15s; white-space: nowrap;
+  }
+  .btn:hover { background: #f9fafb; }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #4096ff; }
+  .btn-danger { background: #fff; border-color: #ffccc7; color: var(--danger); }
+  .btn-danger:hover { background: #fff2f0; }
+  .btn-sm { height: 26px; padding: 0 10px; font-size: 12px; border-radius: 5px; }
+  .link-btn {
+    background: none; border: none; color: var(--primary); cursor: pointer;
+    font-size: 13px; padding: 2px 6px;
+  }
+  .link-btn:hover { color: #4096ff; }
+  .link-btn.danger { color: var(--danger); }
+  .link-btn.danger:hover { color: #ff7875; }
+
+  /* ===== Tab 导航 ===== */
+  .tabs {
+    display: flex; gap: 4px; padding: 12px 24px 0;
+    max-width: 1200px; margin: 0 auto;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    padding: 9px 20px; border: none; background: transparent; cursor: pointer;
+    font-size: 14px; color: var(--text-2);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--primary); }
+  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 24px 56px; }
+  section[hidden] { display: none; }
+
+  /* ===== 统计卡片 ===== */
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 16px; }
+  .card {
+    background: #fff; border-radius: 12px; box-shadow: var(--card-shadow); padding: 20px;
+  }
+  .card .label { color: var(--text-2); font-size: 13px; margin-bottom: 10px; }
+  .card .value {
+    color: var(--primary); font-size: 28px; font-weight: 600;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+
+  /* ===== 面板（图表 / 表格容器） ===== */
+  .panel {
+    background: #fff; border-radius: 12px; box-shadow: var(--card-shadow);
+    padding: 20px; margin-top: 16px;
+  }
+  .panel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .panel-head h3 { font-size: 15px; font-weight: 600; }
+  .panel-head .spacer { flex: 1; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-2); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; }
+
+  /* ===== 表格 ===== */
+  .table-card { position: relative; }
+  .table-card.loading::after {
+    content: "加载中…"; position: absolute; inset: 0; z-index: 2;
+    background: rgba(255, 255, 255, .72); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--primary); font-size: 13px;
+  }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-weight: 500; color: var(--text-2); font-size: 13px;
+    padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td { padding: 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; color: var(--text-1); }
+  tbody tr:hover td { background: #f0f7ff; }
+  td.wrap { max-width: 420px; white-space: normal; word-break: break-all; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--text-3); }
+  .empty { text-align: center; color: var(--text-3); padding: 36px 0; }
+
+  /* ===== 状态徽标 ===== */
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+  .badge.blue   { background: var(--primary-light); color: var(--primary); }
+  .badge.green  { background: #f6ffed; color: var(--success); }
+  .badge.orange { background: #fffbe6; color: #d48806; }
+  .badge.gray   { background: #f3f4f6; color: var(--text-2); }
+
+  /* ===== 错误条 / 分页 / Toast ===== */
+  .error-bar {
+    display: none; background: #fff2f0; border: 1px solid #ffccc7; color: #cf1322;
+    padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 13px;
+    align-items: center; gap: 12px;
+  }
+  .error-bar.show { display: flex; }
+  .error-bar .msg { flex: 1; }
+  .pager {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 10px; padding-top: 14px; color: var(--text-2); font-size: 13px;
+  }
+  .toast {
+    position: fixed; top: 70px; left: 50%; z-index: 99;
+    transform: translateX(-50%) translateY(-8px);
+    background: var(--text-1); color: #fff; padding: 9px 18px; border-radius: 8px;
+    font-size: 13px; opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s; max-width: 80vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--danger); }
+  .toast.success { background: var(--success); }
+
+  /* ===== 地点新增表单 ===== */
+  .add-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .add-form label { font-size: 13px; color: var(--text-2); }
+  @media (max-width: 640px) {
+    .topbar { flex-wrap: wrap; height: auto; padding: 10px 16px; }
+    main, .tabs { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部栏：产品名 + 密钥管理 ===== -->
+<header class="topbar">
+  <div class="brand"><span class="logo">拼</span>拼好车管理后台</div>
+  <div class="key-box">
+    <span class="hint" id="keyHint">未设置密钥</span>
+    <input type="password" id="adminKeyInput" placeholder="管理员密钥" style="width:180px" autocomplete="off">
+    <button class="btn btn-primary" id="saveKeyBtn">保存</button>
+    <button class="btn" id="clearKeyBtn">清除</button>
+  </div>
+</header>
+
+<!-- ===== Tab 导航 ===== -->
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="overview">总览</button>
+  <button class="tab-btn" data-tab="feedback">用户反馈</button>
+  <button class="tab-btn" data-tab="rides">拼车管理</button>
+  <button class="tab-btn" data-tab="places">地点管理</button>
+</nav>
+
+<main>
+  <!-- ===== 总览 ===== -->
+  <section id="tab-overview">
+    <div class="error-bar" id="error-overview">
+      <span class="msg"></span>
+      <button class="btn btn-sm" data-retry="overview">重试</button>
+    </div>
+    <div class="cards" id="statCards"></div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>最近 7 天趋势</h3>
+        <div class="spacer"></div>
+        <div class="legend">
+          <span><i style="background:#1677ff"></i>拼车单</span>
+          <span><i style="background:#91caff"></i>消息数</span>
+        </div>
+      </div>
+      <div id="trendChart" class="empty">暂无数据</div>
+    </div>
+  </section>
+
+  <!-- ===== 用户反馈 ===== -->
+  <section id="tab-feedback" hidden>
+    <div class="error-bar" id="error-feedback">
+      <span class="msg"></span>
+      <button class="btn btn-sm" data-retry="feedback">重试</button>
+    </div>
+    <div class="panel table-card" id="feedbackCard">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>ID</th><th>用户ID</th><th>内容</th><th>时间</th></tr>
+          </thead>
+          <tbody id="feedbackBody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="feedbackPager"></div>
+    </div>
+  </section>
+
+  <!-- ===== 拼车管理 ===== -->
+  <section id="tab-rides" hidden>
+    <div class="error-bar" id="error-rides">
+      <span class="msg"></span>
+      <button class="btn btn-sm" data-retry="rides">重试</button>
+    </div>
+    <div class="panel table-card" id="ridesCard">
+      <div class="panel-head">
+        <h3>拼车单列表</h3>
+        <div class="spacer"></div>
+        <label style="font-size:13px;color:var(--text-2)">状态</label>
+        <select id="rideStatusFilter"></select>
+        <button class="btn btn-sm" id="ridesRefreshBtn">刷新</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>路线</th><th>车主ID</th><th>状态</th>
+              <th>人数</th><th>车牌</th><th>出发时间</th>
+            </tr>
+          </thead>
+          <tbody id="ridesBody"></tbody>
+        </table>
+      </div>
+      <div class="pager" id="ridesPager"></div>
+    </div>
+  </section>
+
+  <!-- ===== 地点管理 ===== -->
+  <section id="tab-places" hidden>
+    <div class="error-bar" id="error-places">
+      <span class="msg"></span>
+      <button class="btn btn-sm" data-retry="places">重试</button>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>新增地点</h3>
+        <div class="spacer"></div>
+        <div class="add-form">
+          <label>名称</label>
+          <input type="text" id="placeNameInput" placeholder="如：学校东门" style="width:180px">
+          <label>排序</label>
+          <input type="number" id="placeSortInput" value="0" style="width:80px">
+          <button class="btn btn-primary" id="addPlaceBtn">添加</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel table-card" id="placesCard">
+      <div class="panel-head">
+        <h3>地点列表</h3>
+        <span class="muted" style="font-size:12px">停用地点可能不在列表中显示（后端仅返回启用项），操作后请刷新重试</span>
+        <div class="spacer"></div>
+        <button class="btn btn-sm" id="placesRefreshBtn">刷新</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>名称</th><th>排序</th><th style="width:280px">操作</th></tr>
+          </thead>
+          <tbody id="placesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+   * 全局状态
+   * ============================================================ */
+  var LS_KEY = 'phc_admin_key';
+
+  var state = {
+    adminKey: '',
+    // 分页状态管理：反馈列表与拼车单列表各自独立维护 page/size/total，
+    // 翻页时仅改变 page 并重新请求对应接口，互不影响。
+    feedback: { page: 0, size: 20, total: 0 },
+    rides: { page: 0, size: 20, total: 0, status: 'ALL' },
+    places: [] // 当前列表顺序（用于上移/下移后生成 orderedIds）
+  };
+
+  // 拼车单 9 个状态（ALL + 9 = 下拉框 10 项）及徽标样式映射
+  var RIDE_STATUSES = ['DRAFT', 'PUBLISHED', 'MATCHING', 'BOOKED', 'IN_PROGRESS',
+    'ARRIVED', 'CLOSED', 'CANCELLED', 'EXPIRED'];
+  var STATUS_META = {
+    DRAFT:       { text: '草稿',   cls: 'gray' },
+    PUBLISHED:   { text: '已发布', cls: 'blue' },
+    MATCHING:    { text: '匹配中', cls: 'blue' },
+    BOOKED:      { text: '已打上', cls: 'green' },
+    IN_PROGRESS: { text: '进行中', cls: 'orange' },
+    ARRIVED:     { text: '已到达', cls: 'orange' },
+    CLOSED:      { text: '已关闭', cls: 'gray' },
+    CANCELLED:   { text: '已取消', cls: 'gray' },
+    EXPIRED:     { text: '已过期', cls: 'gray' }
+  };
+
+  // 总览卡片配置：key 对应 GET /admin/stats/overview 返回字段
+  var OVERVIEW_CARDS = [
+    { key: 'users',              label: '用户数' },
+    { key: 'todayNewUsers',      label: '今日新增用户' },
+    { key: 'ridesTotal',         label: '拼车单总数' },
+    { key: 'todayNewRides',      label: '今日新增拼车单' },
+    { key: 'ridesActive',        label: '活跃单' },
+    { key: 'ridesBooked',        label: '已打上' },
+    { key: 'ridesExpired',       label: '已过期' },
+    { key: 'sessions',           label: '会话数' },
+    { key: 'messages',           label: '消息数' },
+    { key: 'todayNewMessages',   label: '今日新增消息' },
+    { key: 'feedbacks',          label: '反馈数' },
+    { key: 'todayNewFeedbacks',  label: '今日新增反馈' }
+  ];
+
+  /* ============================================================
+   * 纯函数工具：时间格式化 / 数字展示 / HTML 转义
+   * ============================================================ */
+
+  /** ISO 时间 → 本地时区 "YYYY-MM-DD HH:mm"；非法输入原样返回或 '-' */
+  function formatDateTime(iso) {
+    if (iso === null || iso === undefined || iso === '') return '-';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return String(iso);
+    var p = function (n) { return n < 10 ? '0' + n : '' + n; };
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  /** "2026-09-08" → "09-08"（图表日期轴用） */
+  function shortDate(dateStr) {
+    return typeof dateStr === 'string' && dateStr.length >= 10 ? dateStr.slice(5) : String(dateStr || '');
+  }
+
+  /** 数字展示：null/undefined 显示 '-'（纯函数，避免把空值渲染成 0 造成误读） */
+  function formatNumber(n) {
+    if (n === null || n === undefined || n === '') return '-';
+    var num = Number(n);
+    return isNaN(num) ? String(n) : String(num);
+  }
+
+  /** 人数展示 memberCount/capacity，缺失降级为 '-' */
+  function formatCapacity(member, capacity) {
+    if (member === null || member === undefined) return '-';
+    return member + '/' + (capacity === null || capacity === undefined ? '?' : capacity);
+  }
+
+  /** HTML 转义：反馈内容、地点名等用户输入必须转义，防止注入破坏页面 */
+  function escapeHtml(s) {
+    return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  /* ============================================================
+   * Toast 与错误条
+   * ============================================================ */
+  var toastTimer = null;
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.className = 'toast'; }, 2600);
+  }
+
+  /** 每个 Tab 独立错误条：接口失败时显示（含重试按钮），成功加载后隐藏 */
+  function showError(tab, msg) {
+    var bar = document.getElementById('error-' + tab);
+    if (!bar) return;
+    bar.querySelector('.msg').textContent = msg;
+    bar.classList.add('show');
+  }
+  function clearError(tab) {
+    var bar = document.getElementById('error-' + tab);
+    if (bar) bar.classList.remove('show');
+  }
+
+  /* ============================================================
+   * 鉴权请求封装
+   * - 所有请求自动携带 X-Admin-Key 请求头（密钥由顶部输入框维护）；
+   * - 10 秒超时（AbortController），后端未部署时不会无限挂起；
+   * - 非 2xx 统一抛错：403 明确提示"密钥错误"，其余带 HTTP 状态码；
+   * - file:// 打开或网络失败时给出可读提示，页面不白屏。
+   * ============================================================ */
+  function api(path, options) {
+    options = options || {};
+    if (!state.adminKey) {
+      return Promise.reject(new Error('请先在顶部输入并保存管理员密钥'));
+    }
+    var controller = new AbortController();
+    var timer = setTimeout(function () { controller.abort(); }, 10000);
+    return fetch(path, {
+      method: options.method || 'GET',
+      headers: Object.assign({
+        'X-Admin-Key': state.adminKey,
+        'Content-Type': 'application/json'
+      }, options.headers || {}),
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal
+    }).then(function (res) {
+      if (res.status === 403) {
+        var err403 = new Error('密钥错误，请检查管理员密钥');
+        err403.status = 403;
+        throw err403;
+      }
+      if (!res.ok) {
+        // 尝试读取后端 JSON 错误信息（如 message/error 字段），读不到则只报状态码
+        return res.json().catch(function () { return null; }).then(function (data) {
+          var detail = data && (data.message || data.error) ? '：' + (data.message || data.error) : '';
+          var err = new Error('请求失败（HTTP ' + res.status + '）' + detail);
+          err.status = res.status;
+          throw err;
+        });
+      }
+      return res.json();
+    }).catch(function (e) {
+      if (e && e.name === 'AbortError') {
+        var t = new Error('请求超时（10 秒），请确认后端服务已启动');
+        t.status = 0;
+        throw t;
+      }
+      if (e instanceof TypeError) {
+        // fetch 本身失败（断网 / file:// 跨域 / 服务未启动）
+        var n = new Error('网络请求失败，请确认已通过后端服务访问本页面（而非 file://）');
+        n.status = 0;
+        throw n;
+      }
+      throw e;
+    }).finally(function () {
+      clearTimeout(timer);
+    });
+  }
+
+  /* ============================================================
+   * Tab 切换
+   * ============================================================ */
+  var currentTab = 'overview';
+  function switchTab(tab) {
+    currentTab = tab;
+    var btns = document.querySelectorAll('.tab-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('active', btns[i].getAttribute('data-tab') === tab);
+    }
+    var sections = document.querySelectorAll('main > section');
+    for (var j = 0; j < sections.length; j++) {
+      sections[j].hidden = sections[j].id !== 'tab-' + tab;
+    }
+    // 首次进入或重试时重新拉取该 Tab 数据
+    if (tab === 'overview') loadOverview();
+    else if (tab === 'feedback') loadFeedback();
+    else if (tab === 'rides') loadRides();
+    else if (tab === 'places') loadPlaces();
+  }
+
+  /* ============================================================
+   * 总览：统计卡片 + 最近 7 天 SVG 柱状图
+   * ============================================================ */
+  function loadOverview() {
+    clearError('overview');
+    var chartEl = document.getElementById('trendChart');
+    chartEl.innerHTML = '<div class="empty">加载中…</div>';
+    return api('/api/v1/admin/stats/overview').then(function (data) {
+      renderStatCards(data || {});
+      chartEl.innerHTML = buildTrendChartSvg((data && data.daily) || []);
+    }).catch(function (e) {
+      showError('overview', e.message);
+      chartEl.innerHTML = '<div class="empty">数据加载失败</div>';
+      renderStatCards({});
+    });
+  }
+
+  function renderStatCards(data) {
+    var html = '';
+    for (var i = 0; i < OVERVIEW_CARDS.length; i++) {
+      var c = OVERVIEW_CARDS[i];
+      html += '<div class="card"><div class="label">' + escapeHtml(c.label) +
+        '</div><div class="value">' + escapeHtml(formatNumber(data[c.key])) + '</div></div>';
+    }
+    document.getElementById('statCards').innerHTML = html;
+  }
+
+  /**
+   * 纯 SVG 双系列柱状图生成函数（不依赖任何图表库）：
+   * - 输入：daily 数组 [{date, rides, messages}]，恒为最近 7 天、日期升序；
+   * - rides 用主蓝 #1677ff，messages 用浅蓝 #91caff，每组两根柱并排；
+   * - 柱顶显示数值标签，底部为日期轴（MM-DD），左侧为 y 轴刻度网格线；
+   * - 输出：完整 <svg> 字符串，由调用方直接 innerHTML 注入。
+   */
+  function buildTrendChartSvg(daily) {
+    if (!daily || daily.length === 0) return '<div class="empty">暂无数据</div>';
+
+    var W = 760, H = 280;                 // 画布逻辑尺寸（viewBox 自适应缩放）
+    var padL = 48, padR = 16, padT = 30, padB = 40;
+    var plotW = W - padL - padR;
+    var plotH = H - padT - padB;
+    var baseY = padT + plotH;             // 柱子基线（x 轴）
+
+    // 计算 y 轴最大值：取两系列最大值，上浮 20% 给数值标签留空间
+    var maxV = 0;
+    for (var i = 0; i < daily.length; i++) {
+      maxV = Math.max(maxV, Number(daily[i].rides) || 0, Number(daily[i].messages) || 0);
+    }
+    var yMax = Math.max(1, Math.ceil(maxV * 1.2));
+
+    var n = daily.length;
+    var groupW = plotW / n;
+    var barW = Math.min(26, Math.floor(groupW / 3.2));
+    var parts = [];
+
+    // y 轴网格线与刻度（分 4 段）
+    for (var g = 0; g <= 4; g++) {
+      var v = Math.round(yMax * g / 4);
+      var y = baseY - plotH * g / 4;
+      parts.push('<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y +
+        '" stroke="#e5e7eb" stroke-width="1"/>');
+      parts.push('<text x="' + (padL - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#9ca3af">' + v + '</text>');
+    }
+
+    for (var k = 0; k < n; k++) {
+      var d = daily[k];
+      var cx = padL + groupW * k + groupW / 2; // 该日期分组的中心
+      var rh = plotH * (Number(d.rides) || 0) / yMax;
+      var mh = plotH * (Number(d.messages) || 0) / yMax;
+
+      // rides 柱（蓝，左）
+      parts.push('<rect x="' + (cx - barW - 2) + '" y="' + (baseY - rh) + '" width="' + barW +
+        '" height="' + rh + '" rx="3" fill="#1677ff"/>');
+      // 数值标签：柱高为 0 时贴在基线上方，避免压住 x 轴
+      parts.push('<text x="' + (cx - barW / 2 - 1) + '" y="' + (baseY - rh - 5) +
+        '" text-anchor="middle" font-size="11" fill="#1677ff">' + formatNumber(d.rides) + '</text>');
+
+      // messages 柱（浅蓝，右）
+      parts.push('<rect x="' + (cx + 2) + '" y="' + (baseY - mh) + '" width="' + barW +
+        '" height="' + mh + '" rx="3" fill="#91caff"/>');
+      parts.push('<text x="' + (cx + barW / 2 + 1) + '" y="' + (baseY - mh - 5) +
+        '" text-anchor="middle" font-size="11" fill="#0e5fd8">' + formatNumber(d.messages) + '</text>');
+
+      // 日期轴标签
+      parts.push('<text x="' + cx + '" y="' + (H - 14) + '" text-anchor="middle" font-size="12" fill="#6b7280">' +
+        escapeHtml(shortDate(d.date)) + '</text>');
+    }
+
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" ' +
+      'xmlns="http://www.w3.org/2000/svg" role="img" aria-label="最近7天拼车单与消息趋势">' +
+      parts.join('') + '</svg>';
+  }
+
+  /* ============================================================
+   * 用户反馈列表（分页）
+   * ============================================================ */
+  function loadFeedback() {
+    clearError('feedback');
+    var card = document.getElementById('feedbackCard');
+    card.classList.add('loading');
+    var p = state.feedback;
+    return api('/api/v1/admin/feedback?page=' + p.page + '&size=' + p.size)
+      .then(function (data) {
+        p.total = Number(data && data.total) || 0;
+        renderFeedback((data && data.items) || []);
+        renderPager('feedbackPager', p.page, p.size, p.total,
+          function () { p.page--; loadFeedback(); },
+          function () { p.page++; loadFeedback(); });
+      })
+      .catch(function (e) {
+        showError('feedback', e.message);
+        document.getElementById('feedbackBody').innerHTML =
+          '<tr><td colspan="4" class="empty">加载失败</td></tr>';
+        document.getElementById('feedbackPager').innerHTML = '';
+      })
+      .finally(function () { card.classList.remove('loading'); });
+  }
+
+  function renderFeedback(items) {
+    var body = document.getElementById('feedbackBody');
+    if (!items || items.length === 0) {
+      body.innerHTML = '<tr><td colspan="4" class="empty">暂无用户反馈</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      html += '<tr>' +
+        '<td class="num">' + escapeHtml(formatNumber(it.id)) + '</td>' +
+        '<td class="num">' + escapeHtml(formatNumber(it.userId)) + '</td>' +
+        '<td class="wrap">' + escapeHtml(it.content) + '</td>' +
+        '<td class="muted">' + escapeHtml(formatDateTime(it.createdAt)) + '</td>' +
+        '</tr>';
+    }
+    body.innerHTML = html;
+  }
+
+  /* ============================================================
+   * 拼车单列表（状态筛选 + 分页，只读）
+   * ============================================================ */
+  function initRideStatusFilter() {
+    var sel = document.getElementById('rideStatusFilter');
+    var html = '<option value="ALL">全部</option>';
+    for (var i = 0; i < RIDE_STATUSES.length; i++) {
+      var s = RIDE_STATUSES[i];
+      var label = STATUS_META[s] ? STATUS_META[s].text : s;
+      html += '<option value="' + s + '">' + s + '（' + label + '）</option>';
+    }
+    sel.innerHTML = html;
+    sel.addEventListener('change', function () {
+      // 切换筛选条件时重置到第一页
+      state.rides.status = sel.value;
+      state.rides.page = 0;
+      loadRides();
+    });
+  }
+
+  function loadRides() {
+    clearError('rides');
+    var card = document.getElementById('ridesCard');
+    card.classList.add('loading');
+    var p = state.rides;
+    return api('/api/v1/admin/rides?status=' + encodeURIComponent(p.status) +
+        '&page=' + p.page + '&size=' + p.size)
+      .then(function (data) {
+        p.total = Number(data && data.total) || 0;
+        renderRides((data && data.items) || []);
+        renderPager('ridesPager', p.page, p.size, p.total,
+          function () { p.page--; loadRides(); },
+          function () { p.page++; loadRides(); });
+      })
+      .catch(function (e) {
+        showError('rides', e.message);
+        document.getElementById('ridesBody').innerHTML =
+          '<tr><td colspan="7" class="empty">加载失败</td></tr>';
+        document.getElementById('ridesPager').innerHTML = '';
+      })
+      .finally(function () { card.classList.remove('loading'); });
+  }
+
+  function statusBadge(status) {
+    var meta = STATUS_META[status] || { text: status || '-', cls: 'gray' };
+    return '<span class="badge ' + meta.cls + '">' + escapeHtml(meta.text) + '</span>';
+  }
+
+  function renderRides(items) {
+    var body = document.getElementById('ridesBody');
+    if (!items || items.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" class="empty">暂无拼车单</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+      var r = items[i];
+      var origin = r.origin && r.origin.text ? r.origin.text : '-';
+      var dest = r.destination && r.destination.text ? r.destination.text : '-';
+      html += '<tr>' +
+        '<td class="num">' + escapeHtml(formatNumber(r.id)) + '</td>' +
+        '<td class="wrap">' + escapeHtml(origin) + ' <span class="muted">→</span> ' + escapeHtml(dest) + '</td>' +
+        '<td class="num">' + escapeHtml(formatNumber(r.ownerId)) + '</td>' +
+        '<td>' + statusBadge(r.status) + '</td>' +
+        '<td class="num">' + escapeHtml(formatCapacity(r.memberCount, r.capacity)) + '</td>' +
+        '<td>' + (r.plateNumber ? escapeHtml(r.plateNumber) : '<span class="muted">-</span>') + '</td>' +
+        '<td class="muted">' + escapeHtml(formatDateTime(r.departTime)) + '</td>' +
+        '</tr>';
+    }
+    body.innerHTML = html;
+  }
+
+  /* ============================================================
+   * 地点管理：新增 / 重命名 / 停用 / 启用 / 上移下移重排
+   * ============================================================ */
+  function loadPlaces() {
+    clearError('places');
+    var card = document.getElementById('placesCard');
+    card.classList.add('loading');
+    return api('/api/v1/admin/places').then(function (data) {
+      // 后端当前仅返回启用项；停用项可能不显示，属于已知后端行为，
+      // 页面通过"刷新重试"处理，不视为前端错误。
+      state.places = Array.isArray(data) ? data : [];
+      renderPlaces();
+    }).catch(function (e) {
+      showError('places', e.message);
+      state.places = [];
+      renderPlaces();
+    }).finally(function () { card.classList.remove('loading'); });
+  }
+
+  function renderPlaces() {
+    var body = document.getElementById('placesBody');
+    if (state.places.length === 0) {
+      body.innerHTML = '<tr><td colspan="3" class="empty">暂无地点（或后端仅返回启用项，停用地点不可见）</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < state.places.length; i++) {
+      var pl = state.places[i];
+      // 后端 GET 目前只返回启用项；若未来返回 enabled 字段则按其状态切换按钮
+      var isDisabled = pl.enabled === false;
+      var enableBtn = '<button class="link-btn" data-act="enable" data-idx="' + i + '">启用</button>';
+      var disableBtn = '<button class="link-btn danger" data-act="disable" data-idx="' + i + '">停用</button>';
+      html += '<tr>' +
+        '<td>' + escapeHtml(pl.name) + '</td>' +
+        '<td class="num">' + escapeHtml(formatNumber(pl.sortOrder)) + '</td>' +
+        '<td>' +
+          '<button class="link-btn" data-act="up" data-idx="' + i + '"' + (i === 0 ? ' disabled' : '') + '>上移</button>' +
+          '<button class="link-btn" data-act="down" data-idx="' + i + '"' + (i === state.places.length - 1 ? ' disabled' : '') + '>下移</button>' +
+          '<button class="link-btn" data-act="rename" data-idx="' + i + '">重命名</button>' +
+          (isDisabled ? enableBtn : disableBtn) +
+        '</td>' +
+        '</tr>';
+    }
+    body.innerHTML = html;
+  }
+
+  /** 上移/下移：先在本地交换顺序，再把新顺序整体作为 orderedIds 提交重排 */
+  function movePlace(index, dir) {
+    var list = state.places;
+    var target = index + dir;
+    if (target < 0 || target >= list.length) return;
+    var tmp = list[index];
+    list[index] = list[target];
+    list[target] = tmp;
+    var orderedIds = list.map(function (p) { return p.id; });
+    api('/api/v1/admin/places/reorder', { method: 'PUT', body: { orderedIds: orderedIds } })
+      .then(function () {
+        showToast('排序已更新', 'success');
+        renderPlaces(); // 本地顺序已是最新，直接重渲染，无需再请求
+      })
+      .catch(function (e) {
+        showToast(e.message, 'error');
+        loadPlaces(); // 失败时回滚为服务端真实顺序
+      });
+  }
+
+  function renamePlace(index) {
+    var pl = state.places[index];
+    if (!pl) return;
+    var name = window.prompt('请输入新的地点名称：', pl.name);
+    if (name === null) return; // 用户取消
+    name = name.trim();
+    if (!name) { showToast('名称不能为空', 'error'); return; }
+    api('/api/v1/admin/places/' + pl.id, { method: 'PUT', body: { name: name } })
+      .then(function () { showToast('重命名成功', 'success'); loadPlaces(); })
+      .catch(function (e) { showToast(e.message, 'error'); });
+  }
+
+  function disablePlace(index) {
+    var pl = state.places[index];
+    if (!pl) return;
+    if (!window.confirm('确认停用地点「' + pl.name + '」？停用后小程序端不再展示该地点。')) return;
+    api('/api/v1/admin/places/' + pl.id, { method: 'DELETE' })
+      .then(function () { showToast('已停用', 'success'); loadPlaces(); })
+      .catch(function (e) { showToast(e.message, 'error'); });
+  }
+
+  function enablePlace(index) {
+    var pl = state.places[index];
+    if (!pl) return;
+    api('/api/v1/admin/places/' + pl.id + '/enable', { method: 'POST' })
+      .then(function () { showToast('已启用', 'success'); loadPlaces(); })
+      .catch(function (e) { showToast(e.message, 'error'); });
+  }
+
+  function addPlace() {
+    var nameEl = document.getElementById('placeNameInput');
+    var sortEl = document.getElementById('placeSortInput');
+    var name = nameEl.value.trim();
+    var sortOrder = parseInt(sortEl.value, 10);
+    if (!name) { showToast('请输入地点名称', 'error'); return; }
+    if (isNaN(sortOrder)) sortOrder = 0;
+    api('/api/v1/admin/places', { method: 'POST', body: { name: name, sortOrder: sortOrder } })
+      .then(function () {
+        showToast('地点已添加', 'success');
+        nameEl.value = '';
+        sortEl.value = '0';
+        loadPlaces();
+      })
+      .catch(function (e) { showToast(e.message, 'error'); });
+  }
+
+  /* ============================================================
+   * 分页器渲染（反馈 / 拼车单共用）
+   * ============================================================ */
+  function renderPager(containerId, page, size, total, onPrev, onNext) {
+    var el = document.getElementById(containerId);
+    var totalPages = Math.max(1, Math.ceil(total / size));
+    var prevDisabled = page <= 0 ? ' disabled' : '';
+    var nextDisabled = (page + 1 >= totalPages) ? ' disabled' : '';
+    el.innerHTML =
+      '<span>共 ' + total + ' 条</span>' +
+      '<span>第 ' + (page + 1) + ' / ' + totalPages + ' 页</span>' +
+      '<button class="btn btn-sm"' + prevDisabled + ' data-pager="prev">上一页</button>' +
+      '<button class="btn btn-sm"' + nextDisabled + ' data-pager="next">下一页</button>';
+    var prevBtn = el.querySelector('[data-pager="prev"]');
+    var nextBtn = el.querySelector('[data-pager="next"]');
+    if (onPrev) prevBtn.addEventListener('click', onPrev);
+    if (onNext) nextBtn.addEventListener('click', onNext);
+  }
+
+  /* ============================================================
+   * 密钥管理（localStorage 持久化）
+   * ============================================================ */
+  function refreshKeyHint() {
+    document.getElementById('keyHint').textContent =
+      state.adminKey ? '密钥已保存' : '未设置密钥';
+  }
+
+  function saveKey() {
+    var input = document.getElementById('adminKeyInput');
+    var key = input.value.trim();
+    if (!key) { showToast('密钥不能为空', 'error'); return; }
+    state.adminKey = key;
+    try { localStorage.setItem(LS_KEY, key); } catch (e) { /* 隐私模式下 localStorage 不可用，降级为仅内存保存 */ }
+    input.value = '';
+    refreshKeyHint();
+    showToast('密钥已保存', 'success');
+    switchTab(currentTab); // 用新密钥重新加载当前 Tab
+  }
+
+  function clearKey() {
+    state.adminKey = '';
+    try { localStorage.removeItem(LS_KEY); } catch (e) { /* 同上，忽略存储异常 */ }
+    refreshKeyHint();
+    showToast('密钥已清除');
+  }
+
+  /* ============================================================
+   * 事件绑定与初始化
+   * ============================================================ */
+  function bindEvents() {
+    // Tab 切换
+    var btns = document.querySelectorAll('.tab-btn');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].addEventListener('click', function (e) {
+        switchTab(e.currentTarget.getAttribute('data-tab'));
+      });
+    }
+
+    // 错误条"重试"按钮：重新加载对应 Tab
+    var retries = document.querySelectorAll('[data-retry]');
+    for (var r = 0; r < retries.length; r++) {
+      retries[r].addEventListener('click', function (e) {
+        switchTab(e.currentTarget.getAttribute('data-retry'));
+      });
+    }
+
+    // 密钥
+    document.getElementById('saveKeyBtn').addEventListener('click', saveKey);
+    document.getElementById('clearKeyBtn').addEventListener('click', clearKey);
+    document.getElementById('adminKeyInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') saveKey();
+    });
+
+    // 拼车管理
+    document.getElementById('ridesRefreshBtn').addEventListener('click', loadRides);
+
+    // 地点管理（事件委托：表格内所有操作按钮）
+    document.getElementById('addPlaceBtn').addEventListener('click', addPlace);
+    document.getElementById('placesRefreshBtn').addEventListener('click', loadPlaces);
+    document.getElementById('placesBody').addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('button[data-act]') : null;
+      if (!btn || btn.disabled) return;
+      var idx = parseInt(btn.getAttribute('data-idx'), 10);
+      var act = btn.getAttribute('data-act');
+      if (act === 'up') movePlace(idx, -1);
+      else if (act === 'down') movePlace(idx, 1);
+      else if (act === 'rename') renamePlace(idx);
+      else if (act === 'disable') disablePlace(idx);
+      else if (act === 'enable') enablePlace(idx);
+    });
+  }
+
+  function init() {
+    // 恢复已保存的密钥（localStorage 不可用时静默降级）
+    try { state.adminKey = localStorage.getItem(LS_KEY) || ''; } catch (e) { state.adminKey = ''; }
+    refreshKeyHint();
+    initRideStatusFilter();
+    bindEvents();
+    loadOverview();
+  }
+
+  // DOM 就绪后启动（脚本置于 body 末尾，DOMContentLoaded 兜底即可）
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
