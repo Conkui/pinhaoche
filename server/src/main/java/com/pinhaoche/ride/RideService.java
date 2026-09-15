@@ -11,11 +11,16 @@ import com.pinhaoche.place.PlaceService;
 import com.pinhaoche.user.UserContactService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Ride 应用服务（Agent B 边界：Ride + 状态机 + 发布/取消/加入/人数并发/幂等；不处理聊天）。
@@ -23,6 +28,17 @@ import java.util.Map;
  */
 @Service
 public class RideService {
+
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
+    private static final List<RideStatus> PENDING_COMPANION_STATUSES = List.of(
+            RideStatus.PUBLISHED, RideStatus.MATCHING);
+    /** 非终态均尚占用“同时加入”的名额，和现有状态机的终态定义保持一致。 */
+    private static final List<RideStatus> ACTIVE_MEMBER_RIDE_STATUSES = List.of(
+            RideStatus.PUBLISHED, RideStatus.MATCHING, RideStatus.BOOKED,
+            RideStatus.IN_PROGRESS, RideStatus.ARRIVED);
+    private static final int MAX_PENDING_RIDES = 3;
+    private static final int MAX_ACTIVE_JOINED_RIDES = 3;
+    private static final String PENDING_RIDE_LIMIT_MESSAGE = "当前委托较多，请完成或下架后再发布";
 
     private final RideRepository rideRepository;
     private final RideMemberRepository memberRepository;
@@ -174,7 +190,8 @@ public class RideService {
         validateCapacity(req.memberCount(), req.capacity());
         validateStatusFields(req);
         return idempotency.execute(ownerId, idempotencyKey, "ride.create", req,
-                id -> get(id), () -> {
+                id -> get(id), () -> withUserLimitLock(ownerId, () -> {
+                    assertPendingRideLimit(ownerId);
                     Ride ride = new Ride();
                     ride.setOwnerId(ownerId);
                     PlaceRef origin = resolveRef(req.origin());
@@ -197,7 +214,7 @@ public class RideService {
                     ride.setUpdatedAt(now);
                     Ride saved = rideRepository.save(ride);
                     return toDto(saved);
-                });
+                }));
     }
 
     // ---------- 加入（幂等接口 + 条件更新并发，规范 §20/§21） ----------
@@ -210,7 +227,7 @@ public class RideService {
     public RideDto join(long rideId, long userId, String idempotencyKey) {
         featureAvailabilityService.requireFindFriendsEnabled();
         return idempotency.execute(userId, idempotencyKey, "ride.join", rideId,
-                id -> get(rideId), () -> doJoin(rideId, userId));
+                id -> get(rideId), () -> withUserLimitLock(userId, () -> doJoin(rideId, userId)));
     }
 
     /** 包级可见以便针对"成功才写 Outbox"不变量做无需 Spring 上下文的单元测试。 */
@@ -223,6 +240,7 @@ public class RideService {
         if (memberRepository.existsByRideIdAndUserId(rideId, userId)) {
             throw ApiException.validation("已加入该拼车，请勿重复加入");
         }
+        assertActiveJoinedRideLimit(userId);
 
         // 高并发抢位重试：版本乐观锁下每轮只有一个事务能赢，失败者重读新版本再试。
         // READ_COMMITTED + 重试 8 次（实测 50 人并发抢 7 座可全部消化）；仍失败按最终状态精确归因返回 409。
@@ -336,14 +354,51 @@ public class RideService {
         }
     }
 
-    private void validateStatusFields(CreateRideRequest req) {
+    void validateStatusFields(CreateRideRequest req) {
         if (req.origin() == null || req.destination() == null || req.departTime() == null) {
             throw ApiException.validation("origin/destination/departTime 不能为空");
+        }
+        // 以业务时区而非请求自带 offset 比较“日期”：客户端可伪造 offset，不能借此跨过日期红线。
+        LocalDate departDate = req.departTime().atZoneSameInstant(BUSINESS_ZONE).toLocalDate();
+        LocalDate today = LocalDate.now(BUSINESS_ZONE);
+        if (departDate.isBefore(today) || departDate.isAfter(today.plusMonths(1))) {
+            throw ApiException.validation("预打车日期只能选择今天起一个月内");
         }
         if (req.waitingMinutes() != null
                 && req.waitingMinutes() != 5 && req.waitingMinutes() != 10 && req.waitingMinutes() != 15) {
             throw ApiException.validation("waitingMinutes 只允许 5/10/15 或不传");
         }
+    }
+
+    /** 锁内计数，防止四个并发发布请求都先读到 2 条后一起写入。 */
+    void assertPendingRideLimit(long ownerId) {
+        if (rideRepository.countByOwnerIdAndStatusIn(ownerId, PENDING_COMPANION_STATUSES) >= MAX_PENDING_RIDES) {
+            throw ApiException.validation(PENDING_RIDE_LIMIT_MESSAGE);
+        }
+    }
+
+    /** 锁内计数，所有非终态成员 Ride 都算“同时加入”，直到行程真正关闭或异常结束。 */
+    void assertActiveJoinedRideLimit(long userId) {
+        if (memberRepository.countByUserIdAndRideStatusIn(userId, ACTIVE_MEMBER_RIDE_STATUSES)
+                >= MAX_ACTIVE_JOINED_RIDES) {
+            throw ApiException.validation("同时最多加入 3 个拼车，请完成或退出已有行程后再加入");
+        }
+    }
+
+    private <T> T withUserLimitLock(long userId, Supplier<T> action) {
+        String lockName = "pinhaoche:ride-limit:" + userId;
+        if (!Integer.valueOf(1).equals(rideRepository.acquireUserLimitLock(lockName))) {
+            throw new ApiException(ErrorCode.VERSION_CONFLICT, "操作繁忙，请重试");
+        }
+        // GET_LOCK 是连接级而非事务级锁。不能在 action 返回时立即释放：那时本事务尚未
+        // 提交，下一请求会读不到本次未提交的计数并绕过上限。提交/回滚完成前保持该锁。
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                rideRepository.releaseUserLimitLock(lockName);
+            }
+        });
+        return action.get();
     }
 
     /**

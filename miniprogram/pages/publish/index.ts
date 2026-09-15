@@ -32,6 +32,7 @@ Page({
     remark: '',
     submitting: false,
     minDate: '',
+    maxDate: '',
 
     // 幂等键：首次提交生成，失败重试复用；成功后清空（下一次发布需要新 key）
     idemKey: '',
@@ -41,7 +42,9 @@ Page({
     const now = new Date()
     const pad = (n: number) => `${n}`.padStart(2, '0')
     const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-    this.setData({ departDate: today, minDate: today })
+    const max = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate())
+    const maxDate = `${max.getFullYear()}-${pad(max.getMonth() + 1)}-${pad(max.getDate())}`
+    this.setData({ departDate: today, minDate: today, maxDate })
     this.loadPlaces()
   },
 
@@ -210,6 +213,10 @@ Page({
       .catch((err: Error) => {
         // 失败保留 idemKey，用户重试仍用同一 key，服务端幂等去重
         this.setData({ submitting: false })
+        if (err.message === '当前委托较多，请完成或下架后再发布') {
+          wx.showModal({ title: '暂不能发布', content: err.message, showCancel: false })
+          return
+        }
         wx.showToast({ title: err.message, icon: 'none' })
       })
   },

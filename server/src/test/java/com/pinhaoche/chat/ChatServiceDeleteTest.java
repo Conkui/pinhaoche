@@ -3,6 +3,7 @@ package com.pinhaoche.chat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pinhaoche.common.api.ApiException;
 import com.pinhaoche.common.idempotency.IdempotencyService;
+import com.pinhaoche.common.security.RateLimitService;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
 import com.pinhaoche.ride.RideService;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ class ChatServiceDeleteTest {
                                        OutboxEventRepository outbox) {
         return new ChatService(sessions, messages, mock(OnlinePresence.class), mock(IdempotencyService.class),
                 outbox, new ObjectMapper(), mock(StringRedisTemplate.class), mock(TransactionTemplate.class),
-                mock(RideService.class));
+                mock(RideService.class), mock(RateLimitService.class));
     }
 
     private static void setId(Object target, String field, long value) {

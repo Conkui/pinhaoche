@@ -43,6 +43,19 @@ public class RateLimitService {
      * @return true=放行；false=超限（调用方抛 RATE_LIMITED）
      */
     public boolean tryAcquire(String bucketKey, int limit) {
+        return tryAcquire(bucketKey, limit, Duration.ofSeconds(KEY_TTL_SECONDS));
+    }
+
+    /**
+     * 可配置 TTL 的固定窗口计数。调用方须把窗口标识（例如自然日）编码进 bucketKey，
+     * 而不是把"一天"粗暴换算为 24 小时的 epoch 窗口；后者会在东八区本地午夜以外切桶。
+     *
+     * @param ttl 当前固定窗口的剩余生存期；首次计数时写入，后续请求不得续期
+     */
+    public boolean tryAcquire(String bucketKey, int limit, Duration ttl) {
+        if (ttl == null || ttl.isNegative() || ttl.isZero()) {
+            throw new IllegalArgumentException("限流窗口 TTL 必须为正数");
+        }
         try {
             Long count = redis.opsForValue().increment(bucketKey);
             if (count == null) {
@@ -52,7 +65,7 @@ public class RateLimitService {
             }
             if (count == 1L) {
                 // 只有窗口内第一个请求设置 TTL：若每次 INCR 都续期，活跃桶将永不过期，垃圾键越积越多
-                redis.expire(bucketKey, Duration.ofSeconds(KEY_TTL_SECONDS));
+                redis.expire(bucketKey, ttl);
             }
             return isAllowed(count, limit);
         } catch (RuntimeException e) {
@@ -62,6 +75,23 @@ public class RateLimitService {
             // 降级写法与 IdempotencyService 保持一致：捕获 RuntimeException、log.warn、放行。
             log.warn("Redis 不可用，限流放行（fail-open）key={}: {}", bucketKey, e.getMessage());
             return true;
+        }
+    }
+
+    /**
+     * 归还尚未形成业务事实的预占额度。仅用于“先限流、后持久化”且后者失败的补偿；
+     * 普通已成功请求绝不能调用，否则攻击者可伪造释放来绕过限额。窗口标识在 key 中，
+     * 旧自然日 key 不会在新一天复用，因此跨午夜的失败补偿也不会影响当天的桶。
+     */
+    public void release(String bucketKey) {
+        try {
+            Long count = redis.opsForValue().decrement(bucketKey);
+            if (count != null && count <= 0L) {
+                redis.delete(bucketKey);
+            }
+        } catch (RuntimeException e) {
+            // 与 tryAcquire 同一取舍：Redis 降级时不让非核心的配额补偿阻断会话主事务。
+            log.warn("Redis 不可用，限流额度补偿跳过 key={}: {}", bucketKey, e.getMessage());
         }
     }
 

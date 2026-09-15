@@ -37,7 +37,7 @@
   <!-- 出发时间：原生 date/time 双滚轮并排，一个圆角分组框 -->
   <view class="meta field-label field-gap">出发时间</view>
   <view class="time-group">
-    <picker mode="date" value="{{departDate}}" start="{{minDate}}" bindchange="onDateChange" class="time-picker">
+    <picker mode="date" value="{{departDate}}" start="{{minDate}}" end="{{maxDate}}" bindchange="onDateChange" class="time-picker">
       <view class="time-cell">
         <text class="time-label">日期</text>
         <text class="time-value">{{departDate}}</text>

@@ -36,6 +36,10 @@
 | B19 | 管理端接口 | `stats/overview`、`feedback` 分页、`rides?status=`、非法 status | 字段完整（12 标量+daily 7 天升序）；非法 status 400；时间字段为 ISO 字符串 |
 | B20 | 登录限流 | 同 IP 连续 25 次 `POST /auth/login` | 恰好前 20 次 200，其后 429 RATE_LIMITED（RFC-010） |
 | B21 | 静态后台页 | `GET /admin/index.html` | 200；输入密钥后总览/反馈/拼车/地点四 Tab 正常出数据 |
+| B22 | 预打车日期范围 | 分别提交上海自然日昨天、今天+1月+1天的 `POST /rides` | 两次均 400 VALIDATION_ERROR；今天与今天+1自然月可提交 |
+| B23 | 待同行发布上限 | 同一用户连续发布 4 条仍为 PUBLISHED/MATCHING 的预打车单 | 前 3 条成功；第 4 条 400，消息为“当前委托较多，请完成或下架后再发布”；下架/完成一条后可再发布 |
+| B24 | 加入拼车上限 | 同一用户已作为成员加入 3 条非终态 Ride，再加入第 4 条 | 第 4 次 400 VALIDATION_ERROR；CLOSED/CANCELLED/EXPIRED 的成员 Ride 不计入上限 |
+| B25 | 新建会话日限额 | 同一用户向 10 位不同车主建会话，再建第 11 个；重复请求任一既有会话 | 前 10 个新建成功；第 11 个 429 RATE_LIMITED；复用既有会话始终 200 且不消耗配额；下一个上海自然日重置 |
 
 ## C. 微信开发者工具检查（人工，导入即运行）
 

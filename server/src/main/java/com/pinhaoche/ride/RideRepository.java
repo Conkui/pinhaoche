@@ -25,6 +25,20 @@ public interface RideRepository extends JpaRepository<Ride, Long> {
     /** RFC-008：我的发布（含终态），按创建时间倒序。 */
     List<Ride> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
 
+    /** 发布上限检查：产品将 PUBLISHED/MATCHING 定义为仍在“待同行”的预打车单。 */
+    long countByOwnerIdAndStatusIn(long ownerId, List<RideStatus> statuses);
+
+    /**
+     * MySQL 命名锁按用户串行化跨 Ride 的“先计数、后写入”。单靠锁住某一条 Ride
+     * 无法覆盖用户第一次并发发布/加入不同订单时“尚无可锁记录”的空集竞态。
+     */
+    @Query(value = "SELECT GET_LOCK(:lockName, 5)", nativeQuery = true)
+    Integer acquireUserLimitLock(@Param("lockName") String lockName);
+
+    /** 必须在获得锁的同一事务连接释放，避免连接复用时把后续请求无故阻塞。 */
+    @Query(value = "SELECT RELEASE_LOCK(:lockName)", nativeQuery = true)
+    Integer releaseUserLimitLock(@Param("lockName") String lockName);
+
     /**
      * 预打车列表（用户红线：时间效益）——只返回未过出发时间的单，
      * 已过出发时间的拼车单对任何人都不再展示，避免"今天还能看到昨天的单"。

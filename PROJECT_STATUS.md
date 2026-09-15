@@ -2,11 +2,11 @@
 
 | 项目 | 当前值 |
 | --- | --- |
-| 当前版本 | V1.0.0-impl.6（CONTRACT_FREEZE_V1 + RFC-001~011；git 基线 802fc0b） |
+| 当前版本 | V1.0.0-impl.7（CONTRACT_FREEZE_V1 + RFC-001~011；会话/同行额度与日期范围加固） |
 | 当前阶段 | **真实上线体验批次（RFC-011）**：mock/real 由 `.env` + 小程序单开关 `MODE` 驱动；真实微信登录链路修复（微信 `jscode2session` 响应头是 `text/plain`，原实现必然失败）；真实微信头像昵称（头像昵称填写能力 + `PUT /users/me` + `/files/**` 落盘与静态读取）；从零启动文档 `docs/RUNBOOK.md`（含后台管理页）。独立 Review 结论见下 |
 | 数据库版本 | V7__enforce_chat_session_ride_fk.sql（Flyway；V1 冻结未改。V6 将 V4 历史隐藏指令及其关联数据物理删除并移除软删除表；V7 补会话到订单外键） |
 | API 版本 | /api/v1（RFC-001/002/004/006/008/011 端点已实现） |
-| 已完成模块 | 契约全部文档；后端 auth/user/place/ride/chat/notification/importer/feedback/admin/common/infrastructure；小程序 10 页面 + 服务层；预打车出发时间过期过滤 + EXPIRED 定时任务；分享文本解析预填；意见反馈；管理端 Web 后台；接口限流与文本净化；**实时拼与找拼友独立开关及公告页**；**管理员单条/批量订单物理删除（级联清理成员、聊天、事件和幂等记录）**；**聊天页长按删除本人消息**；**真实微信登录（jscode2session）+ 真实头像昵称**；docker 一键环境（`.env` 驱动 mock/real） |
+| 已完成模块 | 契约全部文档；后端 auth/user/place/ride/chat/notification/importer/feedback/admin/common/infrastructure；小程序 10 页面 + 服务层；预打车出发时间过期过滤 + EXPIRED 定时任务；分享文本解析预填；意见反馈；管理端 Web 后台；接口限流与文本净化；**实时拼与找拼友独立开关及公告页**；**管理员单条/批量订单物理删除（级联清理成员、聊天、事件和幂等记录）**；**聊天页长按删除本人消息**；**真实微信登录（jscode2session）+ 真实头像昵称**；**预打车日期为上海自然日今天至+1月、待同行发布最多3条、加入非终态 Ride 最多3条、每日新建会话最多10条且复用不计数**；docker 一键环境（`.env` 驱动 mock/real） |
 | 尚未完成模块（含阻塞原因） | ① **真实 AppSecret（用户侧凭证，代码已就绪）**——真实登录实测已达"调用微信并解析其 errcode"这一步（`errcode=40125 invalid appsecret` 证明链路通），填入 AppSecret 后即可拿到真实 openid；② 真实微信订阅消息网关——需订阅消息模板 id + 用户授权流程；③ 真实 OCR Provider——需腾讯云/兼容 OCR API 密钥；④ 聊天 30 天清理定时任务——纯代码任务，待下个批次；⑤ 小程序订阅消息授权交互（`wx.requestSubscribeMessage`）——依赖②的模板 id；⑥ 压测（HTTP 300 QPS / WS 5000 连接）——需独立压测环境与工具 |
 | 已知问题 | 滴滴/花小猪无官方第三方 API（禁止抓包），导入走降级链路；WS 路由单实例实现；**管理后台仅使用未提交 `.env` 中的独立强随机密钥，仍建议 HTTPS + IP 白名单**；admin 端点暂无自动化测试；**登录限流依赖 Nginx 覆盖式 XFF 配置（RFC-010 部署硬约束）**；**头像存本地盘**（多实例/无卷重建会丢，V2 接对象存储）；**`/files/**` 免鉴权且不受限流覆盖**（`<image src>` 无法带 token，UUID 不可枚举缓解，RFC-011 记录权衡）；**生产 Nginx 需配 `client_max_body_size 8m`**（默认 1m 会让头像上传 413）；畸形 JSON 请求体返回 Spring 默认错误体而非契约 `ApiError`（既有全局缺口）；头像落盘失败返回 400 而非 500（`ErrorCode` 冻结，不允许新增 `INTERNAL_ERROR`）；头像并发保存会让落败方文件成孤儿（`app_user` 无 `@Version`）；mock 身份漂移修复前的旧数据挂在旧 openid 下，清缓存重登即归位 |
 | 真实模式开关（新增，替代旧的 DEV_MOCK_LOGIN 手工开关） | 后端：根目录 `.env`（模板 `.env.example`）的 `WECHAT_MOCK` / `WECHAT_APPID` / `WECHAT_SECRET` / `ADMIN_KEY` / `UPLOAD_DIR`；小程序：`miniprogram/config.ts` 的 `MODE: 'mock' \| 'real'`（`SERVER_ORIGIN`/`BASE_URL`/`WS_URL`/`DEV_MOCK_LOGIN` 全部由它派生）。**两边必须同时切**，只切一边登录必然 401；逐步命令见 `docs/RUNBOOK.md` 第 6 节 |

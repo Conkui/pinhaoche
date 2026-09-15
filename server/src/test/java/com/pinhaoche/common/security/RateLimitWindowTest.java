@@ -3,8 +3,10 @@ package com.pinhaoche.common.security;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 限流窗口纯逻辑测试（RFC-010）：窗口键生成与放行判定被抽成纯静态方法后，
@@ -59,5 +61,13 @@ class RateLimitWindowTest {
         assertThat(RateLimitService.isAllowed(120, 120)).isTrue();
         assertThat(RateLimitService.isAllowed(121, 120)).isFalse();
         assertThat(RateLimitService.isAllowed(0, 120)).isTrue();
+    }
+
+    @Test
+    void configurableWindowRejectsNonPositiveTtlBeforeTouchingRedis() {
+        // 自然日桶会传入“距下一次本地零点”的 TTL；零/负值会让 Redis 立即删键，限流形同虚设。
+        RateLimitService service = new RateLimitService(null);
+        assertThatThrownBy(() -> service.tryAcquire("rl:chat-session:2026-09-15:42", 10, Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

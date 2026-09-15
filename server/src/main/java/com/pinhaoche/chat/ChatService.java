@@ -3,6 +3,7 @@ package com.pinhaoche.chat;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pinhaoche.common.api.ApiException;
 import com.pinhaoche.common.idempotency.IdempotencyService;
+import com.pinhaoche.common.security.RateLimitService;
 import com.pinhaoche.common.util.TextSanitizer;
 import com.pinhaoche.infrastructure.outbox.OutboxEvent;
 import com.pinhaoche.infrastructure.outbox.OutboxEventRepository;
@@ -15,6 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +33,10 @@ public class ChatService {
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
     private static final int CONTENT_MAX = 2000;
     private static final int HISTORY_LIMIT = 200;
+    private static final int CREATE_SESSION_DAILY_LIMIT = 10;
+    /** 产品日期均以用户所在的中国大陆自然日划分，而不是部署机时区或 UTC 日。 */
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Shanghai");
+    private static final String CREATE_SESSION_BUCKET_PREFIX = "rl:chat-session";
 
     private final ChatSessionRepository sessionRepository;
     private final ChatMessageRepository messageRepository;
@@ -38,13 +47,14 @@ public class ChatService {
     private final org.springframework.data.redis.core.StringRedisTemplate redis;
     private final org.springframework.transaction.support.TransactionTemplate txTemplate;
     private final RideService rideService;
+    private final RateLimitService rateLimitService;
 
     public ChatService(ChatSessionRepository sessionRepository, ChatMessageRepository messageRepository,
                        OnlinePresence presence, IdempotencyService idempotency,
                        OutboxEventRepository outboxRepository, ObjectMapper objectMapper,
                        org.springframework.data.redis.core.StringRedisTemplate redis,
                        org.springframework.transaction.support.TransactionTemplate txTemplate,
-                       RideService rideService) {
+                       RideService rideService, RateLimitService rateLimitService) {
         this.sessionRepository = sessionRepository;
         this.messageRepository = messageRepository;
         this.presence = presence;
@@ -54,6 +64,7 @@ public class ChatService {
         this.redis = redis;
         this.txTemplate = txTemplate;
         this.rideService = rideService;
+        this.rateLimitService = rateLimitService;
     }
 
     // ---------- DTO ----------
@@ -76,7 +87,6 @@ public class ChatService {
      * 获取或创建会话（规范 §10：有 → 复用，无 → 创建）。
      * 为什么排序存储 user_low/high：使 (ride, a, b) 与 (ride, b, a) 归一化为同一行，依赖唯一键兜底并发。
      */
-    @Transactional
     public ChatSessionDto getOrCreateSession(long userId, long rideId, long peerUserId) {
         if (userId == peerUserId) {
             throw ApiException.validation("不能与自己建立会话");
@@ -86,8 +96,49 @@ public class ChatService {
         rideService.assertChatPeerAllowed(rideId, userId, peerUserId);
         long low = Math.min(userId, peerUserId);
         long high = Math.max(userId, peerUserId);
-        ChatSession session = sessionRepository.findByRideIdAndUserLowIdAndUserHighId(rideId, low, high)
-                .orElseGet(() -> sessionRepository.save(new ChatSession(rideId, low, high, OffsetDateTime.now())));
+        var existing = sessionRepository.findByRideIdAndUserLowIdAndUserHighId(rideId, low, high);
+        if (existing.isPresent()) {
+            // 复用历史会话没有骚扰扩张风险，不能占用当天“新建会话”配额。
+            return toSessionDto(existing.get(), rideId, peerUserId, userId);
+        }
+
+        // 先确认确无会话才占额：用户反复点同一位车主时会落入上方复用分支，不消耗配额。
+        // bucket 显式带东八区自然日，TTL 则精确截止到下一次东八区零点；不能把一天做成滚动 24 小时。
+        // identity 只来自已鉴权的 userId，不能由客户端伪造。
+        String rateLimitBucket = sessionCreateBucket(LocalDate.now(BUSINESS_ZONE), userId);
+        if (!rateLimitService.tryAcquire(rateLimitBucket,
+                CREATE_SESSION_DAILY_LIMIT, untilNextBusinessMidnight())) {
+            throw new ApiException(com.pinhaoche.common.api.ErrorCode.RATE_LIMITED, "今日新建会话已达上限，请明天再试");
+        }
+        try {
+            // 独立事务配合唯一键：两个并发请求即使都在首次查询时未命中，也只会提交一条会话。
+            ChatSession session = txTemplate.execute(status -> sessionRepository.saveAndFlush(
+                    new ChatSession(rideId, low, high, OffsetDateTime.now())));
+            return toSessionDto(session, rideId, peerUserId, userId);
+        } catch (DataIntegrityViolationException e) {
+            // 并发方已经创建成功，本请求会复用其会话，因此刚预占的“新建”额度必须归还。
+            rateLimitService.release(rateLimitBucket);
+            ChatSession session = sessionRepository.findByRideIdAndUserLowIdAndUserHighId(rideId, low, high)
+                    .orElseThrow(() -> e);
+            return toSessionDto(session, rideId, peerUserId, userId);
+        } catch (RuntimeException e) {
+            // 任何未创建成功的持久化异常都不能吞掉用户当天额度；异常仍原样上抛给全局处理器。
+            rateLimitService.release(rateLimitBucket);
+            throw e;
+        }
+    }
+
+    static String sessionCreateBucket(LocalDate date, long userId) {
+        return CREATE_SESSION_BUCKET_PREFIX + ":" + date + ":" + userId;
+    }
+
+    private static Duration untilNextBusinessMidnight() {
+        ZonedDateTime now = ZonedDateTime.now(BUSINESS_ZONE);
+        ZonedDateTime nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay(BUSINESS_ZONE);
+        return Duration.between(now.toInstant(), nextMidnight.toInstant());
+    }
+
+    private ChatSessionDto toSessionDto(ChatSession session, long rideId, long peerUserId, long userId) {
         return new ChatSessionDto(session.getId(), rideId, peerUserId, unreadCount(session.getId(), userId));
     }
 

@@ -113,6 +113,10 @@ Page({
         if (err.message.indexOf('满') >= 0 || err.message.indexOf('状态') >= 0) {
           this.reload()
         }
+        if (err.message.indexOf('最多加入 3 个拼车') >= 0) {
+          wx.showModal({ title: '暂不能加入', content: err.message, showCancel: false })
+          return
+        }
         wx.showToast({ title: err.message, icon: 'none' })
       })
   },
