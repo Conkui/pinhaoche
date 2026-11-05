@@ -1,0 +1,608 @@
+/* ============================================================
+   拼好车 Web 版设计系统（RFC-016；视觉令牌沿用 RFC-007，参考 Ant Design 5）
+   - 本文件是全局令牌与通用组件；页面级样式只允许写在 css/pages/{ride,chat}.css
+   - 令牌只从这里出（页面文件禁止私定主色/圆角/投影，Review 查令牌一致性）
+   ============================================================ */
+
+:root {
+  /* 主色（RFC-007：Ant Design 蓝）与主按钮轻渐变（自顶向下同色系变浅，非大面积渐变） */
+  --phc-primary: #1677ff;
+  --phc-primary-strong: #0e5fd8;
+  --phc-primary-soft: #e8f3ff;
+  --phc-primary-grad: linear-gradient(180deg, #3d94ff 0%, #1677ff 100%);
+
+  /* 功能色（RFC-007） */
+  --phc-success: #52c41a;
+  --phc-warning: #faad14;
+  --phc-danger: #ff4d4f;
+  --phc-info: #1677ff;
+
+  /* 中性色 */
+  --phc-bg: #f5f7fa;
+  --phc-card: #ffffff;
+  --phc-text: #1f2937;
+  --phc-text-2: #6b7280;
+  --phc-text-3: #9ca3af;
+  --phc-border: #e5e7eb;
+  --phc-line: #f0f1f3;
+
+  /* 圆角/投影（RFC-007：卡片 20rpx→10px，极浅投影） */
+  --phc-radius: 10px;
+  --phc-radius-lg: 14px;
+  --phc-shadow-card: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --phc-shadow-btn: 0 4px 12px rgba(22, 119, 255, 0.25);
+
+  /* 布局 */
+  --phc-header-h: 48px;
+  --phc-tabbar-h: 52px;
+  --phc-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background: #e9edf2; /* 桌面宽屏时两侧的底色；手机上被 .phc-app 盖满不可见 */
+  color: var(--phc-text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============ 应用壳：居中手机宽度 + 头部/视图/底栏 ============ */
+
+.phc-app {
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: var(--phc-bg);
+}
+
+@media (min-width: 520px) {
+  .phc-app {
+    box-shadow: 0 0 24px rgba(15, 23, 42, 0.12); /* 桌面浏览时给"手机屏"边界感 */
+  }
+}
+
+/* 头部：sticky 而非 fixed——跟随 .phc-app 的 max-width 居中，不需要 JS 算偏移 */
+.phc-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--phc-header-h);
+  padding-top: env(safe-area-inset-top, 0px);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 0 var(--phc-line);
+}
+
+.phc-header[hidden] {
+  display: none;
+}
+
+.phc-header__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--phc-text);
+}
+
+.phc-header__back {
+  position: absolute;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--phc-text);
+  cursor: pointer;
+}
+
+.phc-header__back:active {
+  background: var(--phc-line);
+}
+
+.phc-header__back[hidden] {
+  display: none;
+}
+
+.phc-view {
+  flex: 1;
+  padding: 12px 16px calc(20px + var(--phc-safe-bottom));
+}
+
+/* 底栏：仅 4 个 tab 页显示；sticky bottom + flex 壳保证始终贴住视口底部 */
+.phc-tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 -1px 0 var(--phc-line);
+  padding-bottom: var(--phc-safe-bottom);
+}
+
+.phc-tabbar[hidden] {
+  display: none;
+}
+
+.phc-tabbar__item {
+  flex: 1;
+  height: var(--phc-tabbar-h);
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--phc-text-3);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.phc-tabbar__item.is-active {
+  color: var(--phc-primary); /* RFC-007：底栏选中色同步主色 */
+  font-weight: 600;
+}
+
+.phc-tabbar__item:active {
+  background: var(--phc-line);
+}
+
+/* ============ 按钮（每页一个 Primary Action，RFC-007 红线） ============ */
+
+.phc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--phc-radius);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.phc-btn:active {
+  transform: scale(0.98);
+  filter: brightness(0.96);
+}
+
+.phc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+/* 主按钮：主色轻渐变 + 柔和投影（RFC-007） */
+.phc-btn {
+  background: var(--phc-primary-grad);
+  color: #fff;
+  box-shadow: var(--phc-shadow-btn);
+}
+
+/* 次按钮：浅蓝底主色字，用于页面内的次要操作 */
+.phc-btn--secondary {
+  background: var(--phc-primary-soft);
+  color: var(--phc-primary);
+  box-shadow: none;
+}
+
+/* 危险按钮：下架/删除等破坏性操作（仍须先走 confirmDialog 二次确认） */
+.phc-btn--danger {
+  background: var(--phc-danger);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.2);
+}
+
+.phc-btn--block {
+  display: flex;
+  width: 100%;
+}
+
+.phc-btn--sm {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* ============ 卡片与单元格 ============ */
+
+.phc-card {
+  background: var(--phc-card);
+  border-radius: var(--phc-radius);
+  box-shadow: var(--phc-shadow-card);
+}
+
+.phc-card__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--phc-text);
+}
+
+/* 简单列表行（会话列表等）；拼车卡片（信息层级更重）由 pages/ride.css 自定义 */
+.phc-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--phc-card);
+  border-radius: var(--phc-radius);
+  box-shadow: var(--phc-shadow-card);
+  cursor: pointer;
+}
+
+.phc-cell:active {
+  background: #fafbfc;
+}
+
+.phc-cell__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.phc-cell__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--phc-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phc-cell__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--phc-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phc-cell__extra {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+/* ============ 标签（状态体系：RFC-007 功能色，满员/过期用中性灰） ============ */
+
+.phc-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.phc-tag--info {
+  color: var(--phc-info);
+  background: var(--phc-primary-soft);
+}
+
+.phc-tag--success {
+  color: var(--phc-success);
+  background: #f0fbe6;
+}
+
+.phc-tag--warning {
+  color: #d48806;
+  background: #fff7e6;
+}
+
+.phc-tag--danger {
+  color: var(--phc-danger);
+  background: #fff1f0;
+}
+
+.phc-tag--muted {
+  color: var(--phc-text-2);
+  background: #f3f4f6;
+}
+
+/* ============ 表单 ============ */
+
+.phc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.phc-form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phc-form-item__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--phc-text-2);
+}
+
+.phc-input,
+.phc-textarea,
+.phc-select {
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--phc-border);
+  border-radius: var(--phc-radius);
+  background: #fff;
+  color: var(--phc-text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.phc-input {
+  height: 44px;
+}
+
+.phc-select {
+  height: 44px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 32px;
+  /* 自绘下拉箭头（原生 select 各端箭头形态不一） */
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+}
+
+.phc-textarea {
+  min-height: 88px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.phc-input:focus,
+.phc-textarea:focus,
+.phc-select:focus {
+  outline: none;
+  border-color: var(--phc-primary);
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.12);
+}
+
+/* 日期/时间双列（RFC-007：间距为 8 的倍数） */
+.phc-date-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 8px;
+}
+
+.phc-input[type='date'],
+.phc-input[type='time'] {
+  height: 44px;
+}
+
+/* ============ Toast / Dialog / Loading / 空态 ============ */
+
+.phc-toast {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  z-index: 100;
+  max-width: min(calc(100vw - 48px), 420px);
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: rgba(17, 24, 39, 0.88);
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+}
+
+.phc-toast--show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.phc-toast--success {
+  box-shadow: inset 3px 0 0 var(--phc-success);
+}
+
+.phc-toast--error {
+  box-shadow: inset 3px 0 0 var(--phc-danger);
+}
+
+.phc-toast--info {
+  box-shadow: inset 3px 0 0 var(--phc-info);
+}
+
+.phc-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.phc-dialog {
+  width: min(320px, 82vw);
+  border-radius: var(--phc-radius-lg);
+  background: #fff;
+  overflow: hidden;
+  animation: phc-dialog-in 0.16s ease-out;
+}
+
+@keyframes phc-dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.phc-dialog__title {
+  padding: 20px 20px 8px;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.phc-dialog__content {
+  padding: 0 20px 20px;
+  font-size: 14px;
+  color: var(--phc-text-2);
+  text-align: center;
+  word-break: break-word;
+}
+
+.phc-dialog__actions {
+  display: flex;
+  border-top: 1px solid var(--phc-line);
+}
+
+.phc-dialog__btn {
+  flex: 1;
+  height: 48px;
+  border: none;
+  background: #fff;
+  color: var(--phc-text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.phc-dialog__btn:active {
+  background: var(--phc-line);
+}
+
+.phc-dialog__btn--confirm {
+  color: var(--phc-primary);
+  font-weight: 600;
+  border-left: 1px solid var(--phc-line);
+}
+
+.phc-dialog__btn--danger {
+  color: var(--phc-danger);
+}
+
+.phc-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 247, 250, 0.6);
+}
+
+.phc-loading__box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  border-radius: var(--phc-radius-lg);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--phc-shadow-card);
+}
+
+.phc-loading__spinner {
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--phc-primary-soft);
+  border-top-color: var(--phc-primary);
+  border-radius: 50%;
+  animation: phc-spin 0.8s linear infinite;
+}
+
+@keyframes phc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.phc-loading__text {
+  font-size: 13px;
+  color: var(--phc-text-2);
+}
+
+.phc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 56px 24px;
+  text-align: center;
+}
+
+.phc-empty__icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.phc-empty__text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--phc-text);
+}
+
+.phc-empty__hint {
+  font-size: 13px;
+  color: var(--phc-text-3);
+  word-break: break-word;
+}
+
+.phc-empty__retry {
+  margin-top: 8px;
+}
+
+/* 登录失败全屏态 */
+.phc-login-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 60vh;
+  text-align: center;
+}
+
+.phc-login-error__retry {
+  margin-top: 12px;
+  min-width: 140px;
+}
+
+/* 键盘可达性：仅键盘聚焦显示外圈，不破坏触摸态 */
+.phc-btn:focus-visible,
+.phc-tabbar__item:focus-visible,
+.phc-header__back:focus-visible,
+.phc-cell:focus-visible {
+  outline: 2px solid var(--phc-primary);
+  outline-offset: 2px;
+}
